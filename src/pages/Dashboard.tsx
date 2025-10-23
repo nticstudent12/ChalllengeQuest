@@ -2,12 +2,32 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ChallengeCard from "@/components/ChallengeCard";
-import { Crown, Search, Trophy, Zap, Target, LogOut, User, Loader2 } from "lucide-react";
+import {
+  Crown,
+  Search,
+  Trophy,
+  Zap,
+  Target,
+  LogOut,
+  User,
+  Loader2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
-import { useProfile, useChallenges, useUserChallenges, useAuth } from "@/hooks/useApi";
+import {
+  useProfile,
+  useChallenges,
+  useUserChallenges,
+  useAuth,
+} from "@/hooks/useApi";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -22,13 +42,22 @@ const Dashboard = () => {
   const [difficultyFilter, setDifficultyFilter] = useState("all");
 
   // Fetch user profile and challenges
-  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
-  const { data: challengesData, isLoading: challengesLoading, error: challengesError } = useChallenges({
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useProfile();
+  const {
+    data: challengesData,
+    isLoading: challengesLoading,
+    error: challengesError,
+  } = useChallenges({
     category: categoryFilter !== "all" ? categoryFilter : undefined,
     difficulty: difficultyFilter !== "all" ? difficultyFilter : undefined,
-    status: "all"
+    status: "all",
   });
-  const { data: userChallenges, isLoading: userChallengesLoading } = useUserChallenges();
+  const { data: userChallenges, isLoading: userChallengesLoading } =
+    useUserChallenges();
 
   const handleLogout = () => {
     logout();
@@ -45,18 +74,23 @@ const Dashboard = () => {
   };
 
   // Filter challenges based on search query
-  const filteredChallenges = challengesData?.challenges.filter(challenge =>
-    challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    challenge.description.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredChallenges =
+    challengesData?.challenges.filter(
+      (challenge) =>
+        challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        challenge.description.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
   // Get active challenges count
-  const activeChallengesCount = userChallenges?.filter(cp => cp.status === "ACTIVE").length || 0;
+  const activeChallengesCount =
+    userChallenges?.filter((cp) => cp.status === "ACTIVE").length || 0;
 
   // Calculate XP progress (simplified - you might want to implement proper level calculation)
   const currentLevelXP = profile ? (profile.level - 1) * 1000 : 0;
   const nextLevelXP = profile ? profile.level * 1000 : 1000;
-  const xpProgress = profile ? ((profile.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100 : 0;
+  const xpProgress = profile
+    ? ((profile.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
+    : 0;
 
   if (profileLoading) {
     return (
@@ -86,13 +120,15 @@ const Dashboard = () => {
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate("/")}>
             <Crown className="w-8 h-8 text-primary" />
             <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
               ChallengeQuest
             </span>
           </div>
-          
+
           <nav className="hidden md:flex items-center gap-6">
             <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               {t("navigation.dashboard")}
@@ -105,7 +141,10 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/profile")}>
               <User className="w-5 h-5" />
             </Button>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
@@ -124,16 +163,24 @@ const Dashboard = () => {
                 <Trophy className="w-8 h-8 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{profile?.username || t("dashboard.welcome")}</h2>
+                <h2 className="text-2xl font-bold">
+                  {profile?.username || t("dashboard.welcome")}
+                </h2>
                 <p className="text-muted-foreground">
-                  {profile?.rank ? `${t("leaderboard.rank")} #${profile.rank} ${t("leaderboard.globalRankings")}` : t("leaderboard.unranked")}
+                  {profile?.rank
+                    ? `${t("leaderboard.rank")} #${profile.rank} ${t(
+                        "leaderboard.globalRankings"
+                      )}`
+                    : t("leaderboard.unranked")}
                 </p>
               </div>
             </div>
 
             <div className="flex-1 max-w-md space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t("dashboard.levelProgress")}</span>
+                <span className="text-muted-foreground">
+                  {t("dashboard.levelProgress")}
+                </span>
                 <span className="font-semibold">
                   {profile?.xp || 0} / {nextLevelXP} {t("leaderboard.xp")}
                 </span>
@@ -147,14 +194,20 @@ const Dashboard = () => {
                   <Zap className="w-4 h-4" />
                   <span className="text-2xl font-bold">{profile?.xp || 0}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">{t("dashboard.totalXP")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("dashboard.totalXP")}
+                </p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-secondary mb-1">
                   <Target className="w-4 h-4" />
-                  <span className="text-2xl font-bold">{activeChallengesCount}</span>
+                  <span className="text-2xl font-bold">
+                    {activeChallengesCount}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{t("dashboard.activeChallenges")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("dashboard.activeChallenges")}
+                </p>
               </div>
             </div>
           </div>
@@ -176,14 +229,16 @@ const Dashboard = () => {
               <SelectValue placeholder={t("dashboard.category")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("dashboard.allCategories")}</SelectItem>
-              <SelectItem value="urban">Urban Adventure</SelectItem>
-              <SelectItem value="outdoor">Outdoor</SelectItem>
-              <SelectItem value="technology">Technology</SelectItem>
-              <SelectItem value="food">Food & Culture</SelectItem>
+              <SelectItem value="all">
+                {t("dashboard.allCategories")}
+              </SelectItem>
+              <SelectItem value="Urban Adventure">Urban Adventure</SelectItem>
+              <SelectItem value="Outdoor">Outdoor</SelectItem>
+              <SelectItem value="Technology">Technology</SelectItem>
+              <SelectItem value="Food & Culture">Food & Culture</SelectItem>
             </SelectContent>
           </Select>
-          <Select defaultValue="all">
+          <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
             <SelectTrigger className="md:w-[200px]">
               <SelectValue placeholder={t("dashboard.difficulty")} />
             </SelectTrigger>
@@ -199,17 +254,25 @@ const Dashboard = () => {
         {/* Challenges Tabs */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="glass-card">
-            <TabsTrigger value="all">{t("dashboard.availableChallenges")}</TabsTrigger>
-            <TabsTrigger value="active">{t("dashboard.activeChallenges")} ({activeChallengesCount})</TabsTrigger>
-            <TabsTrigger value="available">{t("dashboard.availableChallenges")}</TabsTrigger>
-            <TabsTrigger value="completed">{t("dashboard.completedChallenges")}</TabsTrigger>
+            <TabsTrigger value="all">
+              {t("dashboard.availableChallenges")}
+            </TabsTrigger>
+            <TabsTrigger value="active">
+              {t("dashboard.activeChallenges")} ({activeChallengesCount})
+            </TabsTrigger>
+
+            <TabsTrigger value="completed">
+              {t("dashboard.completedChallenges")}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-6">
             {challengesLoading ? (
               <div className="text-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-                <p className="text-muted-foreground">{t("dashboard.loadingChallenges")}</p>
+                <p className="text-muted-foreground">
+                  {t("dashboard.loadingChallenges")}
+                </p>
               </div>
             ) : challengesError ? (
               <Alert variant="destructive">
@@ -218,25 +281,39 @@ const Dashboard = () => {
                 </AlertDescription>
               </Alert>
             ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredChallenges.map((challenge) => {
-                  const userProgress = userChallenges?.find(uc => uc.challengeId === challenge.id);
-                  const status = userProgress ? 
-                    (userProgress.status === "COMPLETED" ? "completed" : "active") : 
-                    "available";
-                  
-                  const completedStages = userProgress?.stages.filter(s => s.status === "COMPLETED").length || 0;
-                  
+                  const userProgress = userChallenges?.find(
+                    (uc) => uc.challengeId === challenge.id
+                  );
+                  const status = userProgress
+                    ? userProgress.status === "COMPLETED"
+                      ? "completed"
+                      : "active"
+                    : "available";
+
+                  const completedStages =
+                    userProgress?.stages.filter((s) => s.status === "COMPLETED")
+                      .length || 0;
+
                   return (
-                <ChallengeCard
-                  key={challenge.id}
+                    <ChallengeCard
+                      key={challenge.id}
                       id={challenge.id}
                       title={challenge.title}
                       description={challenge.description}
                       category={challenge.category}
-                      difficulty={challenge.difficulty.toLowerCase() as "easy" | "medium" | "hard"}
+                      difficulty={
+                        challenge.difficulty.toLowerCase() as
+                          | "easy"
+                          | "medium"
+                          | "hard"
+                      }
                       xpReward={challenge.xpReward}
-                      deadline={`${Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days left`}
+                      deadline={`${Math.ceil(
+                        (new Date(challenge.endDate).getTime() - Date.now()) /
+                          (1000 * 60 * 60 * 24)
+                      )} days left`}
                       participants={challenge._count.progress}
                       status={status as "available" | "active" | "completed"}
                       stagesCompleted={completedStages}
@@ -246,7 +323,7 @@ const Dashboard = () => {
                     />
                   );
                 })}
-            </div>
+              </div>
             )}
           </TabsContent>
 
@@ -255,21 +332,33 @@ const Dashboard = () => {
               {userChallenges
                 ?.filter((uc) => uc.status === "ACTIVE")
                 .map((userChallenge) => {
-                  const challenge = challengesData?.challenges.find(c => c.id === userChallenge.challengeId);
+                  const challenge = challengesData?.challenges.find(
+                    (c) => c.id === userChallenge.challengeId
+                  );
                   if (!challenge) return null;
-                  
-                  const completedStages = userChallenge.stages.filter(s => s.status === "COMPLETED").length;
-                  
+
+                  const completedStages = userChallenge.stages.filter(
+                    (s) => s.status === "COMPLETED"
+                  ).length;
+
                   return (
-                  <ChallengeCard
-                    key={challenge.id}
+                    <ChallengeCard
+                      key={challenge.id}
                       id={challenge.id}
                       title={challenge.title}
                       description={challenge.description}
                       category={challenge.category}
-                      difficulty={challenge.difficulty.toLowerCase() as "easy" | "medium" | "hard"}
+                      difficulty={
+                        challenge.difficulty.toLowerCase() as
+                          | "easy"
+                          | "medium"
+                          | "hard"
+                      }
                       xpReward={challenge.xpReward}
-                      deadline={`${Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days left`}
+                      deadline={`${Math.ceil(
+                        (new Date(challenge.endDate).getTime() - Date.now()) /
+                          (1000 * 60 * 60 * 24)
+                      )} days left`}
                       participants={challenge._count.progress}
                       status="active"
                       stagesCompleted={completedStages}
@@ -284,7 +373,12 @@ const Dashboard = () => {
           <TabsContent value="available">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredChallenges
-                .filter((challenge) => !userChallenges?.some(uc => uc.challengeId === challenge.id))
+                .filter(
+                  (challenge) =>
+                    !userChallenges?.some(
+                      (uc) => uc.challengeId === challenge.id
+                    )
+                )
                 .map((challenge) => (
                   <ChallengeCard
                     key={challenge.id}
@@ -292,9 +386,17 @@ const Dashboard = () => {
                     title={challenge.title}
                     description={challenge.description}
                     category={challenge.category}
-                    difficulty={challenge.difficulty.toLowerCase() as "easy" | "medium" | "hard"}
+                    difficulty={
+                      challenge.difficulty.toLowerCase() as
+                        | "easy"
+                        | "medium"
+                        | "hard"
+                    }
                     xpReward={challenge.xpReward}
-                    deadline={`${Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days left`}
+                    deadline={`${Math.ceil(
+                      (new Date(challenge.endDate).getTime() - Date.now()) /
+                        (1000 * 60 * 60 * 24)
+                    )} days left`}
                     participants={challenge._count.progress}
                     status="available"
                     onJoin={() => handleJoinChallenge(challenge.id)}
@@ -309,9 +411,11 @@ const Dashboard = () => {
               {userChallenges
                 ?.filter((uc) => uc.status === "COMPLETED")
                 .map((userChallenge) => {
-                  const challenge = challengesData?.challenges.find(c => c.id === userChallenge.challengeId);
+                  const challenge = challengesData?.challenges.find(
+                    (c) => c.id === userChallenge.challengeId
+                  );
                   if (!challenge) return null;
-                  
+
                   return (
                     <ChallengeCard
                       key={challenge.id}
@@ -319,7 +423,12 @@ const Dashboard = () => {
                       title={challenge.title}
                       description={challenge.description}
                       category={challenge.category}
-                      difficulty={challenge.difficulty.toLowerCase() as "easy" | "medium" | "hard"}
+                      difficulty={
+                        challenge.difficulty.toLowerCase() as
+                          | "easy"
+                          | "medium"
+                          | "hard"
+                      }
                       xpReward={challenge.xpReward}
                       deadline="Completed"
                       participants={challenge._count.progress}

@@ -39,7 +39,10 @@ const socketService = initializeSocketService(server);
 
 // Security middleware
 app.use(helmet());
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: "http://localhost:8081",
+  credentials: true,
+}));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

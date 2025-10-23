@@ -1,5 +1,6 @@
 // API configuration and utilities
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+export const getChallengeById = (id: string) => apiClient.getChallengeById(id);
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -166,14 +167,14 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
+   const headers: Record<string, string> = {
+  'Content-Type': 'application/json',
+  ...(options.headers as Record<string, string>),
+};
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
+if (this.token) {
+  headers['Authorization'] = `Bearer ${this.token}`;
+}
 
     try {
       const response = await fetch(url, {
@@ -338,20 +339,3 @@ class ApiClient {
 
 // Create and export API client instance
 export const apiClient = new ApiClient(API_BASE_URL);
-
-// Export types
-export type {
-  User,
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-  Challenge,
-  Stage,
-  ChallengeProgress,
-  StageProgress,
-  JoinChallengeRequest,
-  SubmitStageRequest,
-  LeaderboardEntry,
-  LeaderboardData,
-  LeaderboardStats,
-};

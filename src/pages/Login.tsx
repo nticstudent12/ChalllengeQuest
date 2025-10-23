@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 import { Crown, Mail, Lock, Chrome, Loader2 } from "lucide-react";
@@ -12,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const Login = () => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { login, isLoggingIn, loginError } = useAuth();
   const { t } = useTranslation();
@@ -22,7 +30,9 @@ const Login = () => {
     e.preventDefault();
     try {
       await login({ email, password });
-    navigate("/dashboard");
+
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -54,7 +64,9 @@ const Login = () => {
               {loginError && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    {loginError.message || t("auth.loginFailed")}
+                    {loginError.message ||
+                      (loginError as any).error ||
+                      t("auth.loginFailed")}
                   </AlertDescription>
                 </Alert>
               )}
@@ -93,7 +105,11 @@ const Login = () => {
                 </div>
               </div>
 
-              <Button type="submit" variant="hero" className="w-full" disabled={isLoggingIn}>
+              <Button
+                type="submit"
+                variant="hero"
+                className="w-full"
+                disabled={isLoggingIn}>
                 {isLoggingIn ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -120,8 +136,9 @@ const Login = () => {
                 <button
                   type="button"
                   className="text-primary hover:underline"
-                  onClick={() => {/* TODO: Password reset */}}
-                >
+                  onClick={() => {
+                    /* TODO: Password reset */
+                  }}>
                   {t("auth.forgotPassword")}
                 </button>
               </div>
@@ -131,8 +148,7 @@ const Login = () => {
                 <button
                   type="button"
                   className="text-primary hover:underline font-semibold"
-                  onClick={() => navigate("/register")}
-                >
+                  onClick={() => navigate("/register")}>
                   {t("auth.signUp")}
                 </button>
               </div>
