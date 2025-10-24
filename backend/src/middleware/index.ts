@@ -1,16 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 
-// Rate limiting middleware
+// Rate limiting middleware (auto-adjusts based on environment)
 export const createRateLimit = (windowMs: number, max: number, message?: string) => {
+  const isDev = process.env.NODE_ENV !== 'production';
+
   return rateLimit({
     windowMs,
-    max,
+    max: isDev ? max * 100 : max, // much higher limit in dev mode
     message: message || 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
   });
 };
+
 
 // General rate limiting
 export const generalRateLimit = createRateLimit(
