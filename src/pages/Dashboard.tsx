@@ -37,7 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast } = useToast();    
   const { logout } = useAuth();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,12 +64,12 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     logout();
-    toast({
+        toast({
       title: "✅ Successfully logged out",
       description: "Hope to see you again soon!",
       duration: 2500,
       className:
-        "border-green-500 bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100",
+        "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-100",
     });
 
     navigate("/");
