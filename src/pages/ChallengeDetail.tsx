@@ -9,21 +9,26 @@ import {
   Circle,
   Lock,
   QrCode,
-  Upload,
   Navigation,
   Crown,
+  Calendar,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-// 👈 make sure this function exists
-import { getChallengeById } from "@/lib/api";
+import { getChallengeById, Challenge, StageProgress } from "@/lib/api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 const ChallengeDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [challenge, setChallenge] = useState<any>(null);
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,11 +51,46 @@ const ChallengeDetail = () => {
     fetchChallenge();
   }, [id]);
 
+  // ✅ Get stage status from user progress
+  const getStageStatus = (stageId: string): 'PENDING' | 'COMPLETED' | 'SKIPPED' | 'LOCKED' => {
+    // If user hasn't joined the challenge, all stages are locked
+    if (!challenge?.userProgress) return 'LOCKED';
+    
+    const stageIndex = challenge.stages.findIndex(s => s.id === stageId);
+    const stageProgress = challenge.userProgress.stages.find(sp => sp.stage.id === stageId);
+    
+    // If stage progress exists, return its status
+    if (stageProgress) {
+      return stageProgress.status as 'PENDING' | 'COMPLETED' | 'SKIPPED';
+    }
+    
+    // For the first stage, if user has joined but no progress, it's pending
+    if (stageIndex === 0) {
+      return 'PENDING';
+    }
+    
+    // For subsequent stages, check if previous stage is completed
+    if (stageIndex > 0) {
+      const prevStageId = challenge.stages[stageIndex - 1].id;
+      const prevStageProgress = challenge.userProgress.stages.find(sp => sp.stage.id === prevStageId);
+      
+      // If previous stage is completed, this stage is pending
+      if (prevStageProgress && prevStageProgress.status === 'COMPLETED') {
+        return 'PENDING';
+      }
+      
+      // Otherwise, it's locked
+      return 'LOCKED';
+    }
+    
+    return 'LOCKED';
+  };
+
   // ✅ Stage icon display
-  const getStageIcon = (status: string) => {
-    if (status === "completed")
+  const getStageIcon = (status: 'PENDING' | 'COMPLETED' | 'SKIPPED' | 'LOCKED') => {
+    if (status === "COMPLETED")
       return <CheckCircle className="w-5 h-5 text-success" />;
-    if (status === "active")
+    if (status === "PENDING")
       return <Circle className="w-5 h-5 text-secondary" />;
     return <Lock className="w-5 h-5 text-muted-foreground" />;
   };
@@ -77,36 +117,59 @@ const ChallengeDetail = () => {
       </div>
     );
 
+  // Calculate progress from user's completed stages
   const progress =
-    challenge.stages?.length > 0
-      ? (challenge.stages.filter((s: any) => s.status === "completed").length /
+    challenge.userProgress && challenge.stages?.length > 0
+      ? (challenge.userProgress.stages.filter((sp: StageProgress) => sp.status === "COMPLETED").length /
           challenge.stages.length) *
         100
       : 0;
 
+  // Calculate challenge duration in hours
+  const startDate = new Date(challenge.startDate);
+  const endDate = new Date(challenge.endDate);
+  const durationHours = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60));
+  const durationDays = Math.round(durationHours / 24);
+  
   const daysLeft = Math.max(
     0,
     Math.ceil(
-      (new Date(challenge.endDate).getTime() - new Date().getTime()) /
+      (endDate.getTime() - new Date().getTime()) /
         (1000 * 60 * 60 * 24)
     )
   );
+
+  const isChallengeActive = new Date() >= startDate && new Date() <= endDate;
+  const isChallengeUpcoming = new Date() < startDate;
   return (
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
           <div
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
             onClick={() => navigate("/")}>
-            <Crown className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
               ChallengeQuest
             </span>
           </div>
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-            ← Back to Dashboard
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate("/dashboard")}
+                className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 flex-shrink-0"
+              >
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 hidden sm:inline" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Return to dashboard</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </header>
 
@@ -134,15 +197,33 @@ const ChallengeDetail = () => {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="w-4 h-4 text-secondary" />
-                  <span>{challenge._count?.progress || 0} players</span>
+                  <span>
+                    {challenge._count?.progress || 0} 
+                    {challenge.maxParticipants ? ` / ${challenge.maxParticipants}` : ''} players
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-primary" />
-                  <span>{daysLeft} days left</span>
+                  <span>
+                    {durationDays > 0 ? `${durationDays} days` : `${durationHours} hours`}
+                    {isChallengeActive && ` • ${daysLeft} days left`}
+                    {isChallengeUpcoming && ` • Starts ${Math.ceil((startDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days`}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-success" />
                   <span>{challenge.stages?.length || 0} stages</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Start: {new Date(challenge.startDate).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>End: {new Date(challenge.endDate).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -160,10 +241,14 @@ const ChallengeDetail = () => {
             <div className="md:w-80">
               <Card className="glass-card">
                 <CardContent className="p-6">
-                  <h3 className="font-bold mb-4">Challenge Story</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {challenge.story || "No story provided for this challenge."}
-                  </p>
+                  <h3 className="font-bold mb-4">Challenge Info</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                    <p>Created: {new Date(challenge.createdAt).toLocaleDateString()}</p>
+                    {challenge.maxParticipants && (
+                      <p>Max Participants: {challenge.maxParticipants}</p>
+                    )}
+                    <p>Status: {isChallengeUpcoming ? 'Upcoming' : isChallengeActive ? 'Active' : 'Ended'}</p>
+                  </div>
                   <Button variant="hero" className="w-full">
                     View Map
                   </Button>
@@ -178,70 +263,81 @@ const ChallengeDetail = () => {
           <h2 className="text-2xl font-bold mb-6">Challenge Stages</h2>
 
           {challenge.stages?.length > 0 ? (
-            challenge.stages.map((stage: any, index: number) => (
-              <Card
-                key={stage.id}
-                className={`glass-card border ${
-                  stage.status === "active"
-                    ? "border-secondary"
-                    : "border-border/50"
-                }`}>
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[var(--shadow-glow-primary)]">
-                      {getStageIcon(stage.status)}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h3 className="text-xl font-bold">
-                            Stage {index + 1}: {stage.title}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {stage.location}
-                          </p>
-                        </div>
-                        <Badge variant="outline">+{stage.xpReward} XP</Badge>
+            challenge.stages.map((stage, index: number) => {
+              const stageStatus = getStageStatus(stage.id);
+              const hasQrCode = !!stage.qrCode;
+              
+              return (
+                <Card
+                  key={stage.id}
+                  className={`glass-card border ${
+                    stageStatus === "PENDING"
+                      ? "border-secondary"
+                      : "border-border/50"
+                  }`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[var(--shadow-glow-primary)]">
+                        {getStageIcon(stageStatus)}
                       </div>
 
-                      <p className="text-muted-foreground mb-4">
-                        {stage.description}
-                      </p>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          {stage.verificationType?.includes("QR") && (
-                            <QrCode className="w-4 h-4" />
-                          )}
-                          {stage.verificationType?.includes("Photo") && (
-                            <Upload className="w-4 h-4" />
-                          )}
-                          {stage.verificationType?.includes("GPS") && (
-                            <Navigation className="w-4 h-4" />
-                          )}
-                          <span>{stage.verificationType}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h3 className="text-xl font-bold">
+                              Stage {index + 1}: {stage.title}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              <MapPin className="w-3 h-3 inline mr-1" />
+                              {stage.latitude.toFixed(6)}, {stage.longitude.toFixed(6)}
+                              {stage.radius && ` • Radius: ${stage.radius}m`}
+                            </p>
+                          </div>
                         </div>
 
-                        {stage.status === "completed" && (
-                          <Badge className="bg-success text-success-foreground">
-                            Completed ✓
-                          </Badge>
-                        )}
-                        {stage.status === "active" && (
-                          <Button variant="secondary">Submit Proof</Button>
-                        )}
-                        {stage.status === "locked" && (
-                          <Button variant="ghost" disabled>
-                            Locked
-                          </Button>
-                        )}
+                        <p className="text-muted-foreground mb-4">
+                          {stage.description}
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {hasQrCode && (
+                              <>
+                                <QrCode className="w-4 h-4" />
+                                <span>QR Code</span>
+                              </>
+                            )}
+                            {!hasQrCode && (
+                              <>
+                                <Navigation className="w-4 h-4" />
+                                <span>GPS Location</span>
+                              </>
+                            )}
+                          </div>
+
+                          {stageStatus === "COMPLETED" && (
+                            <Badge className="bg-success text-success-foreground">
+                              Completed ✓
+                            </Badge>
+                          )}
+                          {stageStatus === "PENDING" && isChallengeActive && (
+                            <Button variant="secondary">Submit Proof</Button>
+                          )}
+                          {stageStatus === "LOCKED" && (
+                            <Button variant="ghost" disabled>
+                              Locked
+                            </Button>
+                          )}
+                          {stageStatus === "SKIPPED" && (
+                            <Badge variant="outline">Skipped</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              );
+            })
           ) : (
             <p className="text-muted-foreground">
               No stages found for this challenge.

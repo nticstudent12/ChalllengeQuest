@@ -1,21 +1,91 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { Crown, Users, Trophy, Activity, Plus, Eye, CheckCircle, XCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Crown, Users, Trophy, Activity, Plus, Eye, CheckCircle, XCircle, AlertTriangle, Loader2, User, Tag } from "lucide-react";
 import { useChallenges, useLeaderboardStats } from "@/hooks/useApi";
 import { Badge } from "@/components/ui/badge";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useCreateCategory } from "@/hooks/useApi";
+import { toast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  
+  // Category dialog state
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryDescription, setCategoryDescription] = useState("");
+  const [categoryIcon, setCategoryIcon] = useState("");
+  const [categoryColor, setCategoryColor] = useState("");
 
   const { data: statsData, isLoading: statsLoading } = useLeaderboardStats();
   const { data: challengesData, isLoading: challengesLoading } = useChallenges({ status: 'all', limit: 100 });
+  const createCategoryMutation = useCreateCategory();
+  
   const stats = {
     activeChallenges: challengesData?.challenges?.length ?? 0,
     totalPlayers: statsData?.totalUsers ?? 0,
     activePlayers: 0,
     topPerformers: statsData?.topUser ? 1 : 0,
+  };
+
+  const handleCreateCategory = async () => {
+    if (!categoryName.trim()) {
+      toast({
+        title: "❌ Validation Error",
+        description: "Category name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await createCategoryMutation.mutateAsync({
+        name: categoryName.trim(),
+        description: categoryDescription.trim() || undefined,
+        icon: categoryIcon.trim() || undefined,
+        color: categoryColor.trim() || undefined,
+      });
+
+      toast({
+        title: "✅ Category Created!",
+        description: `Category "${categoryName}" has been successfully created.`,
+        duration: 3000,
+      });
+
+      // Reset form
+      setCategoryName("");
+      setCategoryDescription("");
+      setCategoryIcon("");
+      setCategoryColor("");
+      setIsCategoryDialogOpen(false);
+    } catch (err) {
+      toast({
+        title: "❌ Error Creating Category",
+        description: err instanceof Error ? err.message : "An unexpected error occurred.",
+        duration: 4000,
+        variant: "destructive",
+      });
+    }
   };
 
   const pendingSubmissions: Array<{
@@ -39,21 +109,75 @@ const AdminDashboard = () => {
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Crown className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
               Admin Dashboard
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/")}>
-              View Site
-            </Button>
-            <Button variant="hero" onClick={() => navigate("/admin/create-challenge")}>
-              <Plus className="w-4 h-4" />
-              New Challenge
-            </Button>
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+            <LanguageSwitcher />
+            <ThemeToggle />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate("/")}
+                  className="hidden sm:inline-flex text-sm"
+                >
+                  View Site
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View public site</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/profile")}
+                  className="h-9 w-9 sm:h-10 sm:w-10"
+                >
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View your profile</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsCategoryDialogOpen(true)}
+                  className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10"
+                >
+                  <Tag className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">New Category</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create a new category for challenges</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="hero" 
+                  onClick={() => navigate("/admin/create-challenge")}
+                  className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">New Challenge</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create a new challenge</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </header>
@@ -253,6 +377,84 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Category Dialog */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Category</DialogTitle>
+            <DialogDescription>
+              Add a new category that can be used when creating challenges.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="category-name">Category Name *</Label>
+              <Input
+                id="category-name"
+                placeholder="e.g., Urban Exploration"
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category-description">Description (optional)</Label>
+              <Textarea
+                id="category-description"
+                placeholder="Brief description of this category"
+                value={categoryDescription}
+                onChange={(e) => setCategoryDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category-icon">Icon (optional)</Label>
+                <Input
+                  id="category-icon"
+                  placeholder="Icon name or emoji"
+                  value={categoryIcon}
+                  onChange={(e) => setCategoryIcon(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-color">Color (optional)</Label>
+                <Input
+                  id="category-color"
+                  type="color"
+                  value={categoryColor}
+                  onChange={(e) => setCategoryColor(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCategoryDialogOpen(false);
+                setCategoryName("");
+                setCategoryDescription("");
+                setCategoryIcon("");
+                setCategoryColor("");
+              }}
+              disabled={createCategoryMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateCategory}
+              disabled={createCategoryMutation.isPending || !categoryName.trim()}
+              variant="hero"
+            >
+              {createCategoryMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Create Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

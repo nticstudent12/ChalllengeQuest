@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ import {
   LogOut,
   User,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
@@ -27,6 +28,7 @@ import {
   useChallenges,
   useUserChallenges,
   useAuth,
+  useCategories,
 } from "@/hooks/useApi";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTranslation } from "react-i18next";
@@ -35,6 +37,11 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { toast } from "@/components/ui/sonner";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -45,6 +52,9 @@ const Dashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
 
+  // Fetch categories from backend
+  const { data: categories, isLoading: categoriesLoading } = useCategories(false);
+  
   // Fetch user profile and challenges
   const {
     data: profile,
@@ -62,6 +72,41 @@ const Dashboard = () => {
   });
   const { data: userChallenges, isLoading: userChallengesLoading } =
     useUserChallenges();
+
+  // Get unique categories from existing challenges (for legacy support)
+  const challengeCategories = React.useMemo(() => {
+    if (!challengesData?.challenges) return [];
+    const uniqueCategories = new Set<string>();
+    challengesData.challenges.forEach(challenge => {
+      if (challenge.category) {
+        uniqueCategories.add(challenge.category);
+      }
+    });
+    return Array.from(uniqueCategories).sort();
+  }, [challengesData]);
+
+  // Combine categories from table and from challenges (avoid duplicates)
+  const allCategories = React.useMemo(() => {
+    const categoryMap = new Map<string, { name: string; icon?: string; isFromTable: boolean }>();
+    
+    // Add categories from Category table
+    if (categories) {
+      categories.forEach(cat => {
+        if (cat.isActive) {
+          categoryMap.set(cat.name, { name: cat.name, icon: cat.icon, isFromTable: true });
+        }
+      });
+    }
+    
+    // Add categories from challenges (legacy support)
+    challengeCategories.forEach(catName => {
+      if (!categoryMap.has(catName)) {
+        categoryMap.set(catName, { name: catName, isFromTable: false });
+      }
+    });
+    
+    return Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, challengeCategories]);
 
   const handleLogout = () => {
     logout();
@@ -112,6 +157,28 @@ const Dashboard = () => {
     navigate(`/challenge/${challengeId}`);
   };
 
+  // Helper function to calculate deadline text based on challenge status
+  const getDeadlineText = (startDate: string, endDate: string): string => {
+    const now = new Date().getTime();
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+
+    // Challenge hasn't started yet
+    if (now < start) {
+      const daysUntilStart = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
+      return `Starts in ${daysUntilStart} ${daysUntilStart === 1 ? 'day' : 'days'}`;
+    }
+
+    // Challenge has ended
+    if (now >= end) {
+      return "Ended";
+    }
+
+    // Challenge is active
+    const daysLeft = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+    return `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`;
+  };
+
   // Filter challenges based on search query
   const filteredChallenges =
     challengesData?.challenges.filter(
@@ -158,37 +225,119 @@ const Dashboard = () => {
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
           <div
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
             onClick={() => navigate("/")}>
-            <Crown className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
               ChallengeQuest
             </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-6">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-              {t("navigation.dashboard")}
-            </Button>
-            <Button variant="ghost" onClick={() => navigate("/leaderboard")}>
-              {t("navigation.leaderboard")}
-            </Button>
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" onClick={() => navigate("/dashboard")} className="text-sm">
+                  {t("navigation.dashboard")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View your dashboard with all challenges</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" onClick={() => navigate("/leaderboard")} className="text-sm">
+                  {t("navigation.leaderboard")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View leaderboard rankings</p>
+              </TooltipContent>
+            </Tooltip>
+            {profile?.isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => navigate("/admin")}
+                    className="text-accent hover:text-accent/80 text-sm"
+                  >
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Admin
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Access admin dashboard</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
             <LanguageSwitcher />
             <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/profile")}>
-              <User className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="w-5 h-5" />
-            </Button>
+            {/* Mobile navigation buttons */}
+            <div className="flex items-center gap-1 sm:gap-2 lg:hidden">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/leaderboard")}
+                    className="h-9 w-9"
+                  >
+                    <Trophy className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View leaderboard rankings</p>
+                </TooltipContent>
+              </Tooltip>
+              {profile?.isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => navigate("/admin")}
+                      className="text-accent hover:text-accent/80 h-9 w-9"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Access admin dashboard</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/profile")}
+                  className="h-9 w-9 sm:h-10 sm:w-10"
+                >
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View your profile</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 sm:h-10 sm:w-10">
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Logout from your account</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </header>
@@ -263,7 +412,7 @@ const Dashboard = () => {
               className="pl-10"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={categoriesLoading || challengesLoading}>
             <SelectTrigger className="md:w-[200px]">
               <SelectValue placeholder={t("dashboard.category")} />
             </SelectTrigger>
@@ -271,10 +420,20 @@ const Dashboard = () => {
               <SelectItem value="all">
                 {t("dashboard.allCategories")}
               </SelectItem>
-              <SelectItem value="Urban Adventure">Urban Adventure</SelectItem>
-              <SelectItem value="Outdoor">Outdoor</SelectItem>
-              <SelectItem value="Technology">Technology</SelectItem>
-              <SelectItem value="Food & Culture">Food & Culture</SelectItem>
+              {allCategories.length > 0 ? (
+                allCategories.map((cat) => (
+                  <SelectItem key={cat.name} value={cat.name}>
+                    {cat.icon && <span className="mr-2">{cat.icon}</span>}
+                    {cat.name}
+                  </SelectItem>
+                ))
+              ) : (
+                !categoriesLoading && !challengesLoading && (
+                  <SelectItem value="" disabled>
+                    No categories available
+                  </SelectItem>
+                )
+              )}
             </SelectContent>
           </Select>
           <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
@@ -349,10 +508,7 @@ const Dashboard = () => {
                           | "hard"
                       }
                       xpReward={challenge.xpReward}
-                      deadline={`${Math.ceil(
-                        (new Date(challenge.endDate).getTime() - Date.now()) /
-                          (1000 * 60 * 60 * 24)
-                      )} days left`}
+                      deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                       participants={challenge._count.progress}
                       status={status as "available" | "active" | "completed"}
                       stagesCompleted={completedStages}
@@ -394,10 +550,7 @@ const Dashboard = () => {
                           | "hard"
                       }
                       xpReward={challenge.xpReward}
-                      deadline={`${Math.ceil(
-                        (new Date(challenge.endDate).getTime() - Date.now()) /
-                          (1000 * 60 * 60 * 24)
-                      )} days left`}
+                      deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                       participants={challenge._count.progress}
                       status="active"
                       stagesCompleted={completedStages}
@@ -432,10 +585,7 @@ const Dashboard = () => {
                         | "hard"
                     }
                     xpReward={challenge.xpReward}
-                    deadline={`${Math.ceil(
-                      (new Date(challenge.endDate).getTime() - Date.now()) /
-                        (1000 * 60 * 60 * 24)
-                    )} days left`}
+                    deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                     participants={challenge._count.progress}
                     status="available"
                     onJoin={() => handleJoinChallenge(challenge.id)}

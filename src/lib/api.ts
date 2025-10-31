@@ -51,6 +51,9 @@ export interface LoginRequest {
   password: string;
 }
 
+
+
+
 export interface RegisterRequest {
   email: string;
   username: string;
@@ -71,7 +74,27 @@ export interface Stage {
   qrCode?: string;
   isActive: boolean;
 }
+export interface CreateStageRequest {
+  order: number;
+  title: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  radius?: number; // optional, backend default = 50
+  qrCode?: string; // optional, for QR code verification
+}
 
+export interface CreateChallengeRequest {
+  title: string;
+  description: string;
+  category: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  xpReward: number;
+  startDate: string; // ISO format date string (datetime)
+  endDate: string; // ISO format date string (datetime) - REQUIRED
+  maxParticipants?: number; // optional
+  stages: CreateStageRequest[];
+}
 export interface Challenge {
   id: string;
   title: string;
@@ -100,6 +123,7 @@ export interface ChallengeProgress {
   startedAt: string;
   completedAt?: string;
   stages: StageProgress[];
+  challenge?: Challenge;
 }
 
 export interface StageProgress {
@@ -156,6 +180,32 @@ export interface LeaderboardStats {
   averageXP: number;
 }
 
+// Category interfaces
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface UpdateCategoryRequest {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
 // API client class
 class ApiClient {
   private baseURL: string;
@@ -199,6 +249,10 @@ if (this.token) {
       throw error;
     }
   }
+
+
+
+  
 
   // Auth methods
   async login(credentials: LoginRequest): Promise<AuthResponse> {
@@ -285,6 +339,25 @@ if (this.token) {
     return response.data!;
   }
 
+
+  async createChallenge(data: CreateChallengeRequest): Promise<Challenge> {
+  if (!this.token) {
+    throw new Error("❌ Unauthorized: You must be logged in to create a challenge");
+  }
+
+  const response = await this.request<Challenge>('/challenges', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${this.token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  return response.data!;
+}
+
+
   async submitStage(data: SubmitStageRequest): Promise<StageProgress> {
     const response = await this.request<StageProgress>('/challenges/submit-stage', {
       method: 'POST',
@@ -326,6 +399,47 @@ if (this.token) {
     return response.data!;
   }
 
+  // Category methods
+  async getCategories(includeInactive = false): Promise<Category[]> {
+    const endpoint = `/categories${includeInactive ? '?includeInactive=true' : ''}`;
+    const response = await this.request<Category[]>(endpoint);
+    return response.data!;
+  }
+
+  async getCategoryById(id: string): Promise<Category> {
+    const response = await this.request<Category>(`/categories/${id}`);
+    return response.data!;
+  }
+
+  async createCategory(data: CreateCategoryRequest): Promise<Category> {
+    const response = await this.request<Category>('/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async updateCategory(id: string, data: UpdateCategoryRequest): Promise<Category> {
+    const response = await this.request<Category>(`/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    await this.request(`/categories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleCategoryStatus(id: string): Promise<Category> {
+    const response = await this.request<Category>(`/categories/${id}/toggle-status`, {
+      method: 'PATCH',
+    });
+    return response.data!;
+  }
+
   // Utility methods
   setToken(token: string): void {
     this.token = token;
@@ -343,4 +457,9 @@ if (this.token) {
 }
 
 // Create and export API client instance
+
 export const apiClient = new ApiClient(API_BASE_URL);
+
+// ✅ Export helper for easier use in the frontend
+export const createChallenge = (data: CreateChallengeRequest) =>
+  apiClient.createChallenge(data);

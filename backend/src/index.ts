@@ -21,6 +21,7 @@ import { handleUploadError } from './middleware/upload';
 import { AuthController } from './controllers/authController';
 import { ChallengeController } from './controllers/challengeController';
 import { LeaderboardController } from './controllers/leaderboardController';
+import { CategoryController } from './controllers/categoryController';
 
 // Import middleware
 import { authenticateToken, requireAdmin, optionalAuth } from './middleware/auth';
@@ -94,6 +95,14 @@ apiRouter.get('/leaderboard', LeaderboardController.getLeaderboard);//verified
 apiRouter.get('/leaderboard/stats', LeaderboardController.getStats);
 apiRouter.get('/leaderboard/user-rank', authenticateToken, LeaderboardController.getUserRank);
 apiRouter.post('/leaderboard/update-ranks', authenticateToken, requireAdmin, LeaderboardController.updateRanks);
+
+// Category routes
+apiRouter.get('/categories', CategoryController.getCategories);
+apiRouter.get('/categories/:id', CategoryController.getCategoryById);
+apiRouter.post('/categories', authenticateToken, requireAdmin, CategoryController.createCategory);
+apiRouter.put('/categories/:id', authenticateToken, requireAdmin, CategoryController.updateCategory);
+apiRouter.delete('/categories/:id', authenticateToken, requireAdmin, CategoryController.deleteCategory);
+apiRouter.patch('/categories/:id/toggle-status', authenticateToken, requireAdmin, CategoryController.toggleCategoryStatus);
 
 // Mount API routes
 app.use('/api', apiRouter);

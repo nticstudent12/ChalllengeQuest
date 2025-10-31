@@ -15,6 +15,7 @@ import {
   Zap,
   Loader2,
   LogOut,
+  Home,
 } from "lucide-react";
 import { useLeaderboard } from "@/hooks/useApi";
 import { useEffect, useState } from "react";
@@ -71,30 +72,65 @@ const Leaderboard = () => {
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
           <div
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
             onClick={() => navigate("/")}>
-            <Crown className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
               ChallengeQuest
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-              Dashboard
-            </Button>
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate("/dashboard")}
+                  className="hidden sm:inline-flex text-sm"
+                >
+                  Dashboard
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Go to your dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/dashboard")}
+                  className="sm:hidden h-9 w-9"
+                >
+                  <Home className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Go to your dashboard</p>
+              </TooltipContent>
+            </Tooltip>
 
             {!isAuthenticated && (
-              <Button variant="glass" onClick={() => navigate("/login")}>
+              <Button 
+                variant="glass" 
+                onClick={() => navigate("/login")}
+                className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10"
+              >
                 Sign In
               </Button>
             )}
             {isAuthenticated && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={handleLogout}>
-                    <LogOut className="w-5 h-5" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleLogout}
+                    className="h-9 w-9 sm:h-10 sm:w-10"
+                  >
+                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
@@ -258,8 +294,8 @@ const Leaderboard = () => {
           <Button
             variant="hero"
             size="lg"
-            onClick={() => navigate("/register")}>
-            Start Competing
+            onClick={() => navigate(isAuthenticated ? "/dashboard" : "/register")}>
+            {isAuthenticated ? "Go to Dashboard" : "Start Competing"}
           </Button>
         </div>
       </div>

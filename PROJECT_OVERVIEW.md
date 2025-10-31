@@ -7,6 +7,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🏗️ Architecture Overview
 
 ### Frontend (React + TypeScript)
+
 - **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS with custom design system
@@ -16,6 +17,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - **Authentication**: JWT token management
 
 ### Backend (Node.js + Express)
+
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Express.js
 - **Database**: PostgreSQL with Prisma ORM
@@ -28,24 +30,29 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🚀 Key Features
 
 ### Core Functionality
+
 1. **User Authentication & Management**
+
    - JWT-based authentication
    - User profiles and statistics
    - Admin panel access
 
 2. **Challenge System**
+
    - GPS-based challenges with multiple stages
    - Location validation and radius checking
    - QR code integration
    - Challenge categories and difficulty levels
 
 3. **Progress Tracking**
+
    - Real-time progress updates
    - Stage completion tracking
    - XP and level system
    - Achievement system
 
 4. **Leaderboards**
+
    - Global rankings
    - Time-based leaderboards (daily, weekly, monthly)
    - Real-time updates via WebSocket
@@ -58,6 +65,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 📊 Database Schema
 
 ### Core Entities
+
 - **Users**: User accounts, profiles, XP, levels
 - **Challenges**: Challenge definitions, categories, difficulty
 - **Stages**: Individual challenge stages with GPS coordinates
@@ -69,6 +77,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - **Notifications**: User notifications
 
 ### Relationships
+
 - Users can have multiple ChallengeProgress records
 - Challenges have multiple Stages
 - ChallengeProgress has multiple StageProgress records
@@ -77,6 +86,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🔧 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `GET /api/auth/profile` - Get user profile
@@ -84,6 +94,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - `PUT /api/auth/change-password` - Change password
 
 ### Challenges
+
 - `GET /api/challenges` - List challenges (with filters)
 - `GET /api/challenges/:id` - Get challenge details
 - `POST /api/challenges` - Create challenge (admin)
@@ -92,6 +103,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - `GET /api/challenges/user/my-challenges` - Get user's challenges
 
 ### Leaderboard
+
 - `GET /api/leaderboard` - Get leaderboard
 - `GET /api/leaderboard/stats` - Get statistics
 - `GET /api/leaderboard/user-rank` - Get user's rank
@@ -99,6 +111,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🎨 Frontend Structure
 
 ### Pages
+
 - **Landing**: Marketing homepage with features showcase
 - **Login/Register**: Authentication forms
 - **Dashboard**: Main user interface with challenge browsing
@@ -107,11 +120,13 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - **Admin Dashboard**: Challenge management interface
 
 ### Components
+
 - **ChallengeCard**: Reusable challenge display component
 - **UI Components**: Comprehensive shadcn/ui component library
 - **Custom Hooks**: API integration hooks with React Query
 
 ### State Management
+
 - **React Query**: Server state management
 - **Local State**: Component-level state with useState
 - **Authentication**: JWT token management
@@ -119,6 +134,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🔒 Security Features
 
 ### Backend Security
+
 - JWT token authentication
 - Password hashing with bcrypt
 - Rate limiting on all endpoints
@@ -128,6 +144,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - SQL injection protection with Prisma
 
 ### Frontend Security
+
 - JWT token storage
 - Protected routes
 - Input validation
@@ -136,12 +153,14 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🌐 Real-time Features
 
 ### WebSocket Events
+
 - Leaderboard updates
 - Challenge progress notifications
 - User notifications
 - Admin announcements
 
 ### Real-time Updates
+
 - Live leaderboard changes
 - Challenge progress tracking
 - User status updates
@@ -149,11 +168,13 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 📱 Responsive Design
 
 ### Breakpoints
+
 - **Mobile**: < 768px
 - **Tablet**: 768px - 1024px
 - **Desktop**: > 1024px
 
 ### Design System
+
 - Glass-morphism cards
 - Gradient text effects
 - Custom shadows and glows
@@ -162,12 +183,14 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🚀 Deployment
 
 ### Backend Deployment
+
 1. Build TypeScript: `npm run build`
 2. Set environment variables
 3. Run database migrations
 4. Start production server: `npm start`
 
 ### Frontend Deployment
+
 1. Build for production: `npm run build`
 2. Deploy `dist` folder to hosting service
 3. Configure environment variables
@@ -175,11 +198,13 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🧪 Testing Strategy
 
 ### Backend Testing
+
 - Unit tests for services
 - Integration tests for API endpoints
 - Database tests with Prisma
 
 ### Frontend Testing
+
 - Component tests
 - Integration tests
 - E2E tests for user flows
@@ -187,12 +212,14 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 📈 Performance Optimizations
 
 ### Backend
+
 - Database query optimization
 - Caching strategies
 - Rate limiting
 - Connection pooling
 
 ### Frontend
+
 - Code splitting
 - Image optimization
 - Efficient re-renders
@@ -201,6 +228,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🔄 Development Workflow
 
 ### Setup Process
+
 1. Install dependencies: `npm install`
 2. Configure environment variables
 3. Set up database with Prisma
@@ -208,6 +236,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 5. Start development servers
 
 ### Development Commands
+
 - Backend: `npm run dev`
 - Frontend: `npm run dev`
 - Database: `npm run db:migrate`, `npm run db:seed`
@@ -215,6 +244,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 📚 Documentation
 
 ### Available Documentation
+
 - **Frontend README**: Component usage, styling, API integration
 - **Backend README**: API endpoints, database schema, deployment
 - **Setup Scripts**: Automated setup for both platforms
@@ -223,6 +253,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🎯 Future Enhancements
 
 ### Planned Features
+
 - Mobile app development
 - Social features (friends, teams)
 - Advanced analytics
@@ -231,6 +262,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - Advanced GPS features
 
 ### Technical Improvements
+
 - Microservices architecture
 - Advanced caching
 - CDN integration
@@ -240,6 +272,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 ## 🤝 Contributing
 
 ### Development Guidelines
+
 - Follow TypeScript best practices
 - Use consistent code formatting
 - Write comprehensive tests
@@ -247,6 +280,7 @@ ChallengeQuest is a comprehensive GPS-based challenge platform that combines rea
 - Follow security best practices
 
 ### Code Quality
+
 - ESLint configuration
 - Prettier formatting
 - TypeScript strict mode
@@ -269,7 +303,8 @@ To get started with ChallengeQuest:
 5. **Open your browser**: Navigate to `http://localhost:5173`
 
 **Default admin credentials:**
+
 - Email: `admin@challengequest.com`
-- Password: `admin123`
+- Password: `azerty`
 
 Welcome to ChallengeQuest! 🚀

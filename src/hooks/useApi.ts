@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, type User, type Challenge, type ChallengeProgress, type LeaderboardData, type LeaderboardStats } from '../lib/api';
+import { apiClient, type User, type Challenge, type ChallengeProgress, type LeaderboardData, type LeaderboardStats, type Category } from '../lib/api';
 
 // Auth hooks
 export const useAuth = () => {
@@ -139,6 +139,26 @@ export const useUserRank = (period: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ALL_TIME' 
     queryFn: () => apiClient.getUserRank(period),
     enabled: apiClient.isAuthenticated(),
     staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
+// Category hooks
+export const useCategories = (includeInactive = false) => {
+  return useQuery({
+    queryKey: ['categories', includeInactive],
+    queryFn: () => apiClient.getCategories(includeInactive),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useCreateCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof apiClient.createCategory>[0]) => apiClient.createCategory(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
   });
 };
 

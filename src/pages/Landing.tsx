@@ -1,4 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
+import { AnimatedText } from "@/components/ui/animated-text";
+import { AnimatedLink } from "@/components/ui/animated-link";
 import { useNavigate } from "react-router-dom";
 import {
   Trophy,
@@ -16,6 +19,15 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useApi";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import ParticlesBackground from "@/components/ParticlesBackground";
+import AnimatedGradient from "@/components/AnimatedGradient";
+import FloatingShapes from "@/components/FloatingShapes";
+import GradientOrbs from "@/components/GradientOrbs";
 
 const Landing = () => {
   const { logout } = useAuth();
@@ -69,41 +81,77 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Multi-Layer Animated Background */}
+      <div className="fixed inset-0 w-full h-full -z-10">
+        {/* Base: Gradient Orbs */}
+        <GradientOrbs />
+        
+        {/* Layer 1: Floating Geometric Shapes */}
+        <FloatingShapes />
+        
+        {/* Layer 2: Animated Gradient Waves */}
+        <AnimatedGradient />
+        
+        {/* Layer 3: Interactive Particles */}
+        <ParticlesBackground />
+      </div>
+      
       {/* Navigation */}
-      <nav className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Crown className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+      <nav className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50 relative">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
               ChallengeQuest
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
             <LanguageSwitcher />
             <ThemeToggle />
 
             {!isAuthenticated ? (
               <>
-                <Button variant="ghost" onClick={() => navigate("/login")}>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate("/login")}
+                  className="hidden sm:inline-flex text-sm"
+                >
                   {t("navigation.login")}
                 </Button>
-                <Button variant="hero" onClick={() => navigate("/register")}>
-                  {t("landing.getStarted")}
+                <Button 
+                  variant="hero" 
+                  onClick={() => navigate("/register")}
+                  className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10"
+                >
+                  <span className="hidden sm:inline">{t("landing.getStarted")}</span>
+                  <span className="sm:hidden">Start</span>
                 </Button>
               </>
             ) : (
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="w-5 h-5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleLogout}
+                    className="h-9 w-9 sm:h-10 sm:w-10"
+                  >
+                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Logout from your account</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="container mx-auto px-4 py-20 text-center relative z-10">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
             <Zap className="w-4 h-4 text-primary" />
@@ -113,11 +161,20 @@ const Landing = () => {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            <span className="bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <AnimatedText
+              as="span"
+              effect="gradient"
+              className="block mb-2"
+            >
               {t("landing.title")}
-            </span>
-            <br />
-            <span className="text-foreground">{t("landing.subtitle")}</span>
+            </AnimatedText>
+            <AnimatedText
+              as="span"
+              effect="none"
+              className="text-foreground block"
+            >
+              {t("landing.subtitle")}
+            </AnimatedText>
           </h1>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -125,18 +182,23 @@ const Landing = () => {
           </p>
 
           <div className="flex items-center justify-center gap-4 pt-6">
-            <Button
+            <AnimatedButton
               variant="hero"
               size="xl"
-              onClick={() => navigate("/register")}>
-              {t("landing.startJourney")}
-            </Button>
-            <Button
+              shimmer
+              glow
+              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/register")}
+            >
+              {isAuthenticated ? t("navigation.dashboard") || "Go to Dashboard" : t("landing.startJourney")}
+            </AnimatedButton>
+            <AnimatedButton
               variant="glass"
               size="xl"
-              onClick={() => navigate("/leaderboard")}>
+              shimmer
+              onClick={() => navigate("/leaderboard")}
+            >
               {t("landing.viewLeaderboard")}
-            </Button>
+            </AnimatedButton>
           </div>
 
           <div className="flex items-center justify-center gap-8 pt-12 text-sm text-muted-foreground">
@@ -153,13 +215,12 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-20 relative z-10">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            {t("landing.howItWorks")}{" "}
-            <span className="bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <AnimatedText as="span" effect="gradient">
               {t("landing.howItWorks")}
-            </span>
+            </AnimatedText>
           </h2>
           <p className="text-muted-foreground text-lg">
             {t("landing.howItWorksSubtitle")}
@@ -185,24 +246,26 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-20 relative z-10">
         <div className="glass-card rounded-2xl p-12 text-center border-2 border-primary/20 shadow-[var(--shadow-card)]">
           <Trophy className="w-16 h-16 mx-auto mb-6 text-accent" />
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            {t("landing.readyToCompete")}{" "}
-            <span className="bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <AnimatedText as="span" effect="gradient">
               {t("landing.readyToCompete")}
-            </span>
+            </AnimatedText>
           </h2>
           <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
             {t("landing.readyToCompeteSubtitle")}
           </p>
-          <Button
+          <AnimatedButton
             variant="hero"
             size="xl"
-            onClick={() => navigate("/register")}>
-            {t("landing.createFreeAccount")}
-          </Button>
+            shimmer
+            glow
+            onClick={() => navigate(isAuthenticated ? "/dashboard" : "/register")}
+          >
+            {isAuthenticated ? t("navigation.dashboard") || "Go to Dashboard" : t("landing.createFreeAccount")}
+          </AnimatedButton>
         </div>
       </section>
 

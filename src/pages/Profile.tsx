@@ -12,17 +12,29 @@ import {
   Calendar,
   Shield,
   KeyRound,
+  Trophy,
+  Zap,
+  Target,
+  Award,
+  Activity,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useProfile, useAuth } from "@/hooks/useApi";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useProfile, useAuth, useUserChallenges, useUserRank } from "@/hooks/useApi";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Profile = () => {
   console.log("🌍 API base URL =", import.meta.env.VITE_API_URL);
@@ -51,8 +63,20 @@ const Profile = () => {
     if (!token) navigate("/login");
   }, [navigate]);
 
-  // Load user profile
+  // Load user profile and challenges
   const { data: profile, isLoading, error } = useProfile();
+  const { data: userChallenges, isLoading: challengesLoading } = useUserChallenges();
+  const { data: userRank } = useUserRank('ALL_TIME');
+  
+  // Calculate stats
+  const stats = {
+    totalXP: profile?.xp || 0,
+    level: profile?.level || 1,
+    rank: userRank?.rank || profile?.rank || null,
+    activeChallenges: userChallenges?.filter(c => c.status === 'ACTIVE').length || 0,
+    completedChallenges: userChallenges?.filter(c => c.status === 'COMPLETED').length || 0,
+    totalChallenges: userChallenges?.length || 0,
+  };
 
   const handleLogout = () => {
     logout();
@@ -169,86 +193,308 @@ const Profile = () => {
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
           <div
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
             onClick={() => navigate("/dashboard")}>
-            <Crown className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
               ChallengeQuest
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
             <LanguageSwitcher />
             <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="w-5 h-5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleLogout}
+                  className="h-9 w-9 sm:h-10 sm:w-10"
+                >
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Logout from your account</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </header>
 
       {/* Profile Content */}
-      <main className="container mx-auto px-4 py-10 space-y-8">
-        {/* Profile Info */}
-        <Card className="glass-card border border-primary/20 rounded-xl max-w-4xl mx-auto">
-          <CardContent className="p-8 space-y-8">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[var(--shadow-glow-primary)]">
+      <main className="container mx-auto px-4 py-10 space-y-8 max-w-6xl">
+        {/* Profile Header */}
+        <Card className="glass-card border border-primary/20 rounded-xl">
+          <CardContent className="p-8">
+            <div className="flex flex-col md:flex-row items-center gap-6 mb-6">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[var(--shadow-glow-primary)] border-4 border-background">
                 {profile.avatar ? (
                   <img
                     src={profile.avatar}
                     alt="avatar"
-                    className="w-24 h-24 rounded-full object-cover"
+                    className="w-32 h-32 rounded-full object-cover"
                   />
                 ) : (
-                  <User className="w-12 h-12 text-primary-foreground" />
+                  <User className="w-16 h-16 text-primary-foreground" />
                 )}
               </div>
-              <div>
-                <h1 className="text-3xl font-bold">
-                  {profile.firstName} {profile.lastName}
-                </h1>
-                <p className="text-muted-foreground">@{profile.username}</p>
-              </div>
-            </div>
-
-            {/* Stats and Info */}
-            <div className="grid md:grid-cols-3 gap-6 pt-4">
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-primary" />
-                <span>{profile.email}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-primary" />
-                <span>
-                  Joined {new Date(profile.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-primary" />
-                <span>
-                  {profile.isAdmin ? "Administrator" : "Standard User"}
-                </span>
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                  <h1 className="text-4xl font-bold">
+                    {profile.firstName} {profile.lastName}
+                  </h1>
+                  {profile.isAdmin && (
+                    <Badge className="bg-accent text-accent-foreground">
+                      <Shield className="w-3 h-3 mr-1" />
+                      Admin
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-lg mb-3">@{profile.username}</p>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    <span>{profile.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Joined {new Date(profile.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {stats.rank && (
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-accent" />
+                      <span>Rank #{stats.rank}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* XP Progress */}
-            <div className="space-y-2 pt-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Level Progress</span>
+            <div className="space-y-2 pt-4 border-t border-border/50">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-accent" />
+                  Level {stats.level} Progress
+                </span>
                 <span className="font-semibold">
                   {profile.xp} / {nextLevelXP} XP
                 </span>
               </div>
               <Progress value={xpProgress} className="h-3" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{nextLevelXP - profile.xp} XP until Level {stats.level + 1}</span>
+                <span>{Math.round(xpProgress)}%</span>
+              </div>
             </div>
           </CardContent>
         </Card>
-        {/* Change Password Section */}
-        {/* Change Password Section */}
-        <Card className="glass-card border border-border/40 max-w-4xl mx-auto transition-all duration-300 hover:shadow-[0_0_25px_rgba(99,102,241,0.3)]">
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="glass-card border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <Zap className="w-5 h-5 text-accent" />
+                <span className="text-2xl font-bold">{stats.totalXP}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Total XP</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-secondary/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <Award className="w-5 h-5 text-secondary" />
+                <span className="text-2xl font-bold">{stats.level}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Level</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-accent/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <Target className="w-5 h-5 text-accent" />
+                <span className="text-2xl font-bold">{stats.activeChallenges}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Active</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-success/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <Trophy className="w-5 h-5 text-success" />
+                <span className="text-2xl font-bold">{stats.completedChallenges}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Completed</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs for Challenges and Settings */}
+        <Tabs defaultValue="challenges" className="space-y-6">
+          <TabsList className="glass-card">
+            <TabsTrigger value="challenges">
+              <Activity className="w-4 h-4 mr-2" />
+              My Challenges ({stats.totalChallenges})
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Settings
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="challenges" className="space-y-6">
+            {challengesLoading ? (
+              <Card className="glass-card">
+                <CardContent className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading your challenges...</p>
+                </CardContent>
+              </Card>
+            ) : stats.totalChallenges === 0 ? (
+              <Card className="glass-card">
+                <CardContent className="p-12 text-center">
+                  <Target className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-xl font-semibold mb-2">No Challenges Yet</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Start your journey by joining a challenge from the dashboard!
+                  </p>
+                  <Button variant="hero" onClick={() => navigate("/dashboard")}>
+                    Browse Challenges
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Active Challenges */}
+                {stats.activeChallenges > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                      <Activity className="w-6 h-6 text-primary" />
+                      Active Challenges ({stats.activeChallenges})
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {userChallenges
+                        ?.filter(c => c.status === 'ACTIVE')
+                        .map((userChallenge) => {
+                          const completedStages = userChallenge.stages.filter(
+                            s => s.status === 'COMPLETED'
+                          ).length;
+                          const totalStages = userChallenge.challenge?.stages?.length || 0;
+                          const progress = totalStages > 0 ? (completedStages / totalStages) * 100 : 0;
+                          
+                          if (!userChallenge.challenge) return null;
+                          
+                          return (
+                            <Card key={userChallenge.id} className="glass-card border-primary/20 hover:border-primary/50 transition-all">
+                              <CardHeader>
+                                <div className="flex items-start justify-between mb-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {userChallenge.challenge.category || 'Challenge'}
+                                  </Badge>
+                                  <Badge className="bg-primary text-primary-foreground">
+                                    ACTIVE
+                                  </Badge>
+                                </div>
+                                <CardTitle className="text-lg">{userChallenge.challenge.title}</CardTitle>
+                                <CardDescription className="line-clamp-2">
+                                  {userChallenge.challenge.description || 'No description'}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Progress</span>
+                                    <span>{completedStages}/{totalStages} stages</span>
+                                  </div>
+                                  <Progress value={progress} className="h-2" />
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Trophy className="w-4 h-4 text-accent" />
+                                  <span>{userChallenge.challenge.xpReward || 0} XP reward</span>
+                                </div>
+                                <Button 
+                                  variant="hero" 
+                                  className="w-full"
+                                  onClick={() => navigate(`/challenge/${userChallenge.challengeId}`)}
+                                >
+                                  Continue Challenge
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                        .filter(Boolean)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Completed Challenges */}
+                {stats.completedChallenges > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                      <Trophy className="w-6 h-6 text-success" />
+                      Completed Challenges ({stats.completedChallenges})
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {userChallenges
+                        ?.filter(c => c.status === 'COMPLETED')
+                        .slice(0, 6)
+                        .map((userChallenge) => {
+                          if (!userChallenge.challenge) return null;
+                          return (
+                            <Card key={userChallenge.id} className="glass-card border-success/20 hover:border-success/50 transition-all">
+                              <CardHeader>
+                                <div className="flex items-start justify-between mb-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {userChallenge.challenge.category || 'Challenge'}
+                                  </Badge>
+                                  <Badge className="bg-success text-success-foreground">
+                                    COMPLETED
+                                  </Badge>
+                                </div>
+                                <CardTitle className="text-lg">{userChallenge.challenge.title}</CardTitle>
+                                <CardDescription className="line-clamp-2">
+                                  {userChallenge.challenge.description || 'No description'}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Trophy className="w-4 h-4 text-accent" />
+                                  <span>Earned {userChallenge.challenge.xpReward || 0} XP</span>
+                                </div>
+                                {userChallenge.completedAt && (
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>Completed {new Date(userChallenge.completedAt).toLocaleDateString()}</span>
+                                  </div>
+                                )}
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full"
+                                  onClick={() => navigate(`/challenge/${userChallenge.challengeId}`)}
+                                >
+                                  View Details
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                        .filter(Boolean)}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="settings">
+            {/* Change Password Section */}
+            <Card className="glass-card border border-border/40 transition-all duration-300 hover:shadow-[0_0_25px_rgba(99,102,241,0.3)]">
           <CardContent className="p-8 space-y-8">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -328,7 +574,9 @@ const Profile = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

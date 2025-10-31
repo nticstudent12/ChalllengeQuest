@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Crown, Mail, Lock, Chrome, Loader2 } from "lucide-react";
+import { Crown, Mail, Lock, Chrome, Loader2, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useApi";
 import { useTranslation } from "react-i18next";
@@ -26,6 +26,7 @@ const Login = () => {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // ✅ Show error toast dynamically when loginError changes
   useEffect(() => {
@@ -98,41 +99,47 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-background/95">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
-            <Crown className="w-10 h-10 text-primary" />
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[var(--shadow-glow-primary)]">
+              <Crown className="w-6 h-6 text-primary-foreground" />
+            </div>
             <span className="text-3xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
               ChallengeQuest
             </span>
           </div>
-          <p className="text-muted-foreground">{t("auth.welcomeBack")}</p>
+          <p className="text-base text-muted-foreground font-medium">{t("auth.welcomeBack")}</p>
           <div className="mt-4">
             <LanguageSwitcher />
           </div>
         </div>
 
         {/* Login Card */}
-        <Card className="glass-card border-border/50">
-          <CardHeader>
-            <CardTitle>{t("auth.signIn")}</CardTitle>
-            <CardDescription>{t("auth.enterCredentials")}</CardDescription>
+        <Card className="glass-card border-border/50 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-glow-primary)] transition-all duration-300 rounded-xl overflow-hidden">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl font-bold">{t("auth.signIn")}</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground/80 mt-1">
+              {t("auth.enterCredentials")}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+          <CardContent className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                  {t("auth.email")}
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-11 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
                     required
                     disabled={isLoggingIn}
                   />
@@ -140,26 +147,41 @@ const Login = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">{t("auth.password")}</Label>
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                  {t("auth.password")}
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10 h-11 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
                     required
                     disabled={isLoggingIn}
                   />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
               <Button
                 type="submit"
                 variant="hero"
-                className="w-full"
+                className="w-full h-11 text-sm font-semibold shadow-lg"
                 disabled={isLoggingIn}>
                 {isLoggingIn ? (
                   <>
@@ -171,22 +193,22 @@ const Login = () => {
                 )}
               </Button>
 
-              <div className="relative my-4">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  OR
+              <div className="relative my-6">
+                <Separator className="bg-border/50" />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs font-medium text-muted-foreground/80">
+                  {t("common.or") || "OR"}
                 </span>
               </div>
 
-              <Button type="button" variant="glass" className="w-full">
-                <Chrome className="w-4 h-4" />
+              <Button type="button" variant="glass" className="w-full h-11 text-sm font-medium border-border/50 hover:border-border transition-all">
+                <Chrome className="w-4 h-4 mr-2" />
                 {t("auth.continueWithGoogle")}
               </Button>
 
-              <div className="text-center text-sm">
+              <div className="text-center pt-2">
                 <button
                   type="button"
-                  className="text-primary hover:underline"
+                  className="text-xs sm:text-sm text-primary hover:underline hover:text-primary/80 transition-colors font-medium"
                   onClick={() => {
                     /* TODO: Password reset */
                   }}>
@@ -194,14 +216,16 @@ const Login = () => {
                 </button>
               </div>
 
-              <div className="text-center text-sm text-muted-foreground">
-                {t("auth.dontHaveAccount")}{" "}
-                <button
-                  type="button"
-                  className="text-primary hover:underline font-semibold"
-                  onClick={() => navigate("/register")}>
-                  {t("auth.signUp")}
-                </button>
+              <div className="text-center pt-2 border-t border-border/50">
+                <p className="text-xs sm:text-sm text-muted-foreground/90">
+                  {t("auth.dontHaveAccount")}{" "}
+                  <button
+                    type="button"
+                    className="text-primary hover:underline hover:text-primary/80 transition-colors font-semibold"
+                    onClick={() => navigate("/register")}>
+                    {t("auth.signUp")}
+                  </button>
+                </p>
               </div>
             </form>
           </CardContent>
@@ -209,7 +233,11 @@ const Login = () => {
 
         {/* Back button */}
         <div className="text-center mt-6">
-          <Button variant="ghost" onClick={() => navigate("/")}>
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate("/")}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
             ← {t("common.back")} {t("navigation.home")}
           </Button>
         </div>

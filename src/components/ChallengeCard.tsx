@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
+import { FloatingCard } from "@/components/ui/floating-card";
 import { Progress } from "@/components/ui/progress";
 import { MapPin, Clock, Trophy, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -47,6 +49,7 @@ const ChallengeCard = ({
   const progressPercentage = (stagesCompleted / totalStages) * 100;
 
   return (
+    <FloatingCard floating glow>
     <Card className="glass-card border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[var(--shadow-glow-primary)] group">
       <CardHeader>
         <div className="flex items-start justify-between mb-2">
@@ -92,26 +95,27 @@ const ChallengeCard = ({
 
         <div className="flex gap-2 pt-2">
           {status === "available" && (
-            <Button variant="hero" className="flex-1" onClick={onJoin}>
+            <AnimatedButton variant="hero" className="flex-1" shimmer glow onClick={onJoin}>
               {t("dashboard.joinChallenge")}
-            </Button>
+            </AnimatedButton>
           )}
           {status === "active" && (
-            <Button variant="secondary" className="flex-1" onClick={onViewDetails}>
+            <AnimatedButton variant="secondary" className="flex-1" shimmer onClick={onViewDetails}>
               {t("dashboard.continueChallenge")}
-            </Button>
+            </AnimatedButton>
           )}
           {status === "completed" && (
             <Button variant="glass" className="flex-1" disabled>
               {t("dashboard.challengeCompleted")}
             </Button>
           )}
-          <Button variant="outline" onClick={onViewDetails}>
+          <AnimatedButton variant="outline" onClick={onViewDetails}>
             {t("dashboard.viewDetails")}
-          </Button>
+          </AnimatedButton>
         </div>
       </CardContent>
     </Card>
+    </FloatingCard>
   );
 };
 
