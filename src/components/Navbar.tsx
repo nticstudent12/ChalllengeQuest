@@ -1,0 +1,521 @@
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Crown, LogOut, User as UserIcon, ShieldCheck, Plus, Home, ArrowLeft, Trophy, LayoutDashboard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useAuth, useProfile } from "@/hooks/useApi";
+import { useTranslation } from "react-i18next";
+import { apiClient } from "@/lib/api";
+
+interface NavbarProps {
+  /**
+   * The variant/style of the navbar
+   * - 'client': Fixed client navbar (Logo, Dashboard, Leaderboard, Language, Theme, Profile, Logout)
+   * - 'admin': Fixed admin navbar (Admin Dashboard icon that navigates to AdminDashboard)
+   * - 'default': Standard navbar (Landing - for backward compatibility)
+   * - 'profile': Profile page (for backward compatibility)
+   * - 'leaderboard': Leaderboard page (for backward compatibility)
+   * - 'challenge-detail': Challenge detail page (shows back button)
+   * - 'create-challenge': Create challenge page (shows back to admin)
+   */
+  variant?: 'client' | 'admin' | 'default' | 'dashboard' | 'profile' | 'leaderboard' | 'challenge-detail' | 'create-challenge';
+  
+  /**
+   * Custom title override (optional)
+   * If not provided, uses default title based on variant and user state
+   */
+  title?: string;
+  
+  /**
+   * Click handler for title/logo (optional)
+   * If not provided, uses default navigation based on variant
+   */
+  onTitleClick?: () => void;
+}
+
+const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { logout } = useAuth();
+  const { data: profile } = useProfile();
+  const isAuthenticated = apiClient.isAuthenticated();
+  const isAdmin = profile?.isAdmin ?? false;
+
+  // Determine default title
+  const getDefaultTitle = (): string => {
+    if (title) return title;
+    
+    switch (variant) {
+      case 'admin':
+        return 'Admin Dashboard';
+      case 'dashboard':
+        return isAdmin ? 'Admin Dashboard' : 'ChallengeQuest';
+      case 'profile':
+      case 'challenge-detail':
+      case 'create-challenge':
+      case 'default':
+      default:
+        return 'ChallengeQuest';
+    }
+  };
+
+  // Determine default title click handler
+  const handleTitleClick = () => {
+    if (onTitleClick) {
+      onTitleClick();
+      return;
+    }
+
+    switch (variant) {
+      case 'admin':
+      case 'dashboard':
+      case 'profile':
+        navigate('/dashboard');
+        break;
+      case 'challenge-detail':
+      case 'default':
+      default:
+        navigate('/');
+        break;
+      case 'create-challenge':
+        navigate('/admin');
+        break;
+    }
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const navbarTitle = getDefaultTitle();
+  const titleIsClickable = variant !== 'admin' && variant !== 'dashboard' && variant !== 'create-challenge' && variant !== 'client';
+
+  // Fixed client variant: Logo, Dashboard, Leaderboard, Language, Theme, Profile, Logout
+  if (variant === 'client') {
+    return (
+      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          {/* Logo/Title */}
+          <div
+            className="flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink transition-all cursor-pointer hover:opacity-80"
+            onClick={() => navigate('/dashboard')}
+          >
+            <div className="relative">
+              <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 drop-shadow-sm" />
+              <div className="absolute inset-0 bg-primary/20 blur-xl opacity-50 -z-10" />
+            </div>
+            <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] via-[hsl(263,70%,65%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate drop-shadow-sm">
+              ChallengeQuest
+            </span>
+          </div>
+
+          {/* Right side actions */}
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+            {/* Dashboard Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/dashboard")}
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Go to dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Leaderboard Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/leaderboard")}
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                >
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Leaderboard
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View leaderboard</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* Profile Icon */}
+            {isAuthenticated && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/profile")}
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View your profile</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Logout Icon */}
+            {isAuthenticated && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:text-destructive transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Logout from your account</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // Fixed admin variant: Admin Dashboard icon that navigates to AdminDashboard
+  if (variant === 'admin') {
+    return (
+      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          {/* Logo/Title */}
+          <div
+            className="flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink transition-all cursor-pointer hover:opacity-80"
+            onClick={() => navigate('/admin')}
+          >
+            <div className="relative">
+              <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 drop-shadow-sm" />
+              <div className="absolute inset-0 bg-primary/20 blur-xl opacity-50 -z-10" />
+            </div>
+            <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] via-[hsl(263,70%,65%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate drop-shadow-sm">
+              Admin Dashboard
+            </span>
+          </div>
+
+          {/* Right side actions - Just Admin Dashboard icon */}
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/admin")}
+                  className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Admin Dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // Special layout for create-challenge: back button on left, title in center, empty space on right
+  if (variant === 'create-challenge') {
+    return (
+      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/admin")}
+                className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 flex-shrink-0"
+              >
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 hidden sm:inline" />
+                <span className="hidden sm:inline">Back to Admin</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Return to admin dashboard</p>
+            </TooltipContent>
+          </Tooltip>
+          <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-center truncate flex-1 min-w-0">
+            {navbarTitle}
+          </h1>
+          <div className="w-12 sm:w-24 flex-shrink-0" />
+        </div>
+      </header>
+    );
+  }
+
+  return (
+    <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50 shadow-sm">
+      <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+        {/* Logo/Title */}
+        <div
+          className={`flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink transition-all ${titleIsClickable ? 'cursor-pointer hover:opacity-80' : ''}`}
+          onClick={titleIsClickable ? handleTitleClick : undefined}
+        >
+          <div className="relative">
+            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 drop-shadow-sm" />
+            <div className="absolute inset-0 bg-primary/20 blur-xl opacity-50 -z-10" />
+          </div>
+          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] via-[hsl(263,70%,65%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate drop-shadow-sm">
+            {navbarTitle}
+          </span>
+        </div>
+
+        {/* Right side actions */}
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+          {/* Language Switcher & Theme Toggle - shown for most variants */}
+          {(variant === 'default' || variant === 'dashboard' || variant === 'profile' || variant === 'leaderboard') && (
+            <>
+              <LanguageSwitcher />
+              <ThemeToggle />
+            </>
+          )}
+
+          {/* Variant-specific buttons */}
+          {variant === 'default' && (
+            <>
+              {!isAuthenticated ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/login")}
+                    className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                  >
+                    {t("navigation.login")}
+                  </Button>
+                  <Button
+                    variant="hero"
+                    onClick={() => navigate("/register")}
+                    className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 shadow-md hover:shadow-lg transition-all hover:scale-105"
+                  >
+                    <span className="hidden sm:inline">{t("landing.getStarted")}</span>
+                    <span className="sm:hidden">Start</span>
+                  </Button>
+                </>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleLogout}
+                      className="h-9 w-9 sm:h-10 sm:w-10 hover:text-destructive transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Logout from your account</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </>
+          )}
+
+          {variant === 'dashboard' && (
+            <>
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigate("/admin")}
+                      className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                    >
+                      <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Admin Panel</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Go to admin panel</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="hero"
+                      onClick={() => navigate("/admin/create-challenge")}
+                      className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10"
+                    >
+                      <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">New Challenge</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Create a new challenge</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/profile")}
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View your profile</p>
+                </TooltipContent>
+              </Tooltip>
+              {isAuthenticated && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleLogout}
+                      className="h-9 w-9 sm:h-10 sm:w-10 hover:text-destructive transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Logout from your account</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </>
+          )}
+
+
+          {variant === 'profile' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="h-9 w-9 sm:h-10 sm:w-10"
+                >
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Logout from your account</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {variant === 'challenge-detail' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/dashboard")}
+                  className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 flex-shrink-0 hover:bg-muted/50 transition-colors"
+                >
+                  <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 hidden sm:inline" />
+                  <span className="hidden sm:inline">Back to Dashboard</span>
+                  <span className="sm:hidden">Back</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Return to dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+
+          {/* Leaderboard-specific buttons */}
+          {variant === 'leaderboard' && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/dashboard")}
+                    className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                  >
+                    Dashboard
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Go to your dashboard</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/dashboard")}
+                    className="sm:hidden h-9 w-9 hover:bg-primary/10 transition-colors"
+                  >
+                    <Home className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Go to your dashboard</p>
+                </TooltipContent>
+              </Tooltip>
+              {!isAuthenticated && (
+              <Button
+                variant="glass"
+                onClick={() => navigate("/login")}
+                className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 hover:bg-primary/10 transition-colors"
+              >
+                Sign In
+              </Button>
+              )}
+              {isAuthenticated && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleLogout}
+                      className="h-9 w-9 sm:h-10 sm:w-10 hover:text-destructive transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Logout from your account</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;
+

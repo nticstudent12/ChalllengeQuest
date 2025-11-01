@@ -1,15 +1,19 @@
 import { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, MapPin, Save, Loader2 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Plus, MapPin, Save, Loader2, X } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
-import { useCategories } from "@/hooks/useApi";
+import { useCategories, useCreateChallenge } from "@/hooks/useApi";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Level, Challenge } from "@/lib/api";
 import {
   Tooltip,
   TooltipContent,
@@ -23,28 +27,122 @@ interface Stage {
   gps: string;
   radius?: number;
   qrCode?: string;
+  qrCodeFile?: File | null;
 }
 
 const CreateChallenge = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isEditMode = !!id;
+  const queryClient = useQueryClient();
   
   // Fetch categories from backend
   const { data: categories, isLoading: categoriesLoading } = useCategories(false);
+  const createChallengeMutation = useCreateChallenge();
+  
+  // Fetch challenge for edit mode
+  const { data: challenge, isLoading: challengeLoading } = useQuery<Challenge>({
+    queryKey: ['challenge', id],
+    queryFn: () => apiClient.getChallengeById(id!),
+    enabled: isEditMode && !!id,
+  });
+  
+  // Update challenge mutation
+  const updateChallengeMutation = useMutation({
+    mutationFn: (data: Partial<CreateChallengeRequest>) => apiClient.updateChallenge(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['challenges'] });
+      queryClient.invalidateQueries({ queryKey: ['challenge', id] });
+      toast({
+        title: "🎯 Challenge Updated!",
+        description: "Your challenge has been successfully updated.",
+        duration: 3000,
+      });
+      navigate("/admin");
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "❌ Error Updating Challenge",
+        description: err.message || "An unexpected error occurred.",
+        duration: 4000,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Fetch levels from backend
+  const { data: levels = [], isLoading: levelsLoading } = useQuery<Level[]>({
+    queryKey: ['levels'],
+    queryFn: () => apiClient.getLevels(false),
+  });
   
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
+  const [requiredLevel, setRequiredLevel] = useState<number>(1);
   const [xpReward, setXpReward] = useState(500);
   const [startDate, setStartDate] = useState("");
   const [duration, setDuration] = useState(24);
   const [maxParticipants, setMaxParticipants] = useState<number | undefined>(undefined);
+  const [challengeImage, setChallengeImage] = useState<File | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | undefined>(undefined);
   
   // Stages state
   const [stages, setStages] = useState<Stage[]>([
     { id: 1, title: "", description: "", gps: "", radius: 50 }
   ]);
+  
+  // Load challenge data when in edit mode
+  React.useEffect(() => {
+    if (isEditMode && challenge) {
+      setTitle(challenge.title || "");
+      setDescription(challenge.description || "");
+      setCategory(challenge.category || "");
+      setDifficulty((challenge.difficulty?.toLowerCase() as "easy" | "medium" | "hard") || "easy");
+      setRequiredLevel(challenge.requiredLevel || 1);
+      setXpReward(challenge.xpReward || 500);
+      
+      const start = new Date(challenge.startDate);
+      const end = new Date(challenge.endDate);
+      const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      
+      // Format date for datetime-local input
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, '0');
+      const day = String(start.getDate()).padStart(2, '0');
+      const hours = String(start.getHours()).padStart(2, '0');
+      const minutes = String(start.getMinutes()).padStart(2, '0');
+      setStartDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+      setDuration(Math.round(durationHours));
+      
+      setMaxParticipants(challenge.maxParticipants || undefined);
+      setExistingImageUrl(challenge.image);
+      
+      // Load stages
+      if (challenge.stages && challenge.stages.length > 0) {
+        setStages(challenge.stages.map((stage, index) => ({
+          id: index + 1,
+          title: stage.title || "",
+          description: stage.description || "",
+          gps: "",
+          radius: stage.radius || 50,
+          qrCode: stage.qrCode,
+        })));
+      }
+    }
+  }, [challenge, isEditMode]);
+
+  // Helper function to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
 
   const addStage = () => {
     setStages([...stages, { id: stages.length + 1, title: "", description: "", gps: "", radius: 50 }]);
@@ -81,63 +179,101 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
     
-    // Validate stages
-    const validatedStages = stages.map((stage, index) => {
-      if (!stage.title.trim() || !stage.description.trim() || !stage.gps.trim()) {
+    // Validate stages and process QR codes (GPS disabled - QR codes only)
+    const validatedStages = await Promise.all(stages.map(async (stage, index) => {
+      if (!stage.title.trim() || !stage.description.trim()) {
         throw new Error(`Stage ${index + 1} is missing required fields`);
       }
 
-      const gpsParts = stage.gps.split(",").map(s => s.trim());
-      if (gpsParts.length !== 2) {
-        throw new Error(`Stage ${index + 1} GPS coordinates must be in format "latitude, longitude"`);
+      // GPS coordinates are no longer required (GPS functionality disabled)
+      
+      // Process QR code: if file is uploaded, convert to base64; otherwise use existing qrCode string
+      let qrCodeData: string | undefined = undefined;
+      if (stage.qrCodeFile) {
+        // Validate file type
+        const validImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+        if (!validImageTypes.includes(stage.qrCodeFile.type)) {
+          throw new Error(`Stage ${index + 1} QR code must be an image file (PNG, JPG, GIF, or WEBP)`);
+        }
+        // Validate file size (max 2MB)
+        if (stage.qrCodeFile.size > 2 * 1024 * 1024) {
+          throw new Error(`Stage ${index + 1} QR code image must be smaller than 2MB`);
+        }
+        qrCodeData = await fileToBase64(stage.qrCodeFile);
+      } else if (stage.qrCode && stage.qrCode.trim()) {
+        qrCodeData = stage.qrCode.trim();
       }
 
-      const latitude = parseFloat(gpsParts[0]);
-      const longitude = parseFloat(gpsParts[1]);
-
-      if (isNaN(latitude) || isNaN(longitude)) {
-        throw new Error(`Stage ${index + 1} has invalid GPS coordinates`);
-      }
-
-      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-        throw new Error(`Stage ${index + 1} has GPS coordinates out of valid range`);
+      // QR code is now required for all stages
+      if (!qrCodeData) {
+        throw new Error(`Stage ${index + 1} requires a QR code. Please upload a QR code image.`);
       }
 
       return {
         order: index + 1,
         title: stage.title.trim(),
         description: stage.description.trim(),
-        latitude,
-        longitude,
-        radius: stage.radius || 50,
-        ...(stage.qrCode && { qrCode: stage.qrCode.trim() }),
+        // GPS coordinates disabled - set to default values
+        latitude: 0,
+        longitude: 0,
+        radius: 50,
+        qrCode: qrCodeData,
       };
-    });
+    }));
+
+    // Process challenge image if provided
+    let challengeImageData: string | undefined = undefined;
+    if (challengeImage) {
+      // Validate file type
+      const validImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(challengeImage.type)) {
+        toast({
+          title: "❌ Validation Error",
+          description: "Challenge image must be an image file (PNG, JPG, GIF, or WEBP)",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (challengeImage.size > 5 * 1024 * 1024) {
+        toast({
+          title: "❌ Validation Error",
+          description: "Challenge image must be smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      challengeImageData = await fileToBase64(challengeImage);
+    }
 
     const challengeData = {
       title: title.trim(),
       description: description.trim(),
       category: category,
       difficulty: difficulty.toUpperCase() as "EASY" | "MEDIUM" | "HARD",
+      requiredLevel: requiredLevel,
       xpReward: xpReward,
       startDate: startDateTime.toISOString(),
       endDate: endDateTime.toISOString(),
+      ...(challengeImageData && { image: challengeImageData }),
       ...(maxParticipants && maxParticipants > 0 && { maxParticipants }),
       stages: validatedStages,
     };
 
-    await apiClient.createChallenge(challengeData);
-
-    toast({
-      title: "🎯 Challenge Created!",
-      description: "Your challenge has been successfully created.",
-      duration: 3000,
-    });
-
-    navigate("/admin");
+    if (isEditMode) {
+      await updateChallengeMutation.mutateAsync(challengeData);
+    } else {
+      await createChallengeMutation.mutateAsync(challengeData);
+      toast({
+        title: "🎯 Challenge Created!",
+        description: "Your challenge has been successfully created.",
+        duration: 3000,
+      });
+      navigate("/admin");
+    }
   } catch (err) {
     toast({
-      title: "❌ Error Creating Challenge",
+      title: isEditMode ? "❌ Error Updating Challenge" : "❌ Error Creating Challenge",
       description: err instanceof Error ? err.message : "An unexpected error occurred.",
       duration: 4000,
       variant: "destructive",
@@ -145,34 +281,22 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 };
 
+  // Show loading state while fetching challenge for edit
+  if (isEditMode && challengeLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading challenge...</p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate("/admin")}
-                className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 flex-shrink-0"
-              >
-                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 hidden sm:inline" />
-                <span className="hidden sm:inline">Back to Admin</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Return to admin dashboard</p>
-            </TooltipContent>
-          </Tooltip>
-          <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-center truncate flex-1 min-w-0">
-            Create New Challenge
-          </h1>
-          <div className="w-12 sm:w-24 flex-shrink-0" />
-        </div>
-      </header>
+      <Navbar variant="create-challenge" title={isEditMode ? "Edit Challenge" : "Create New Challenge"} />
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -183,6 +307,82 @@ const handleSubmit = async (e: React.FormEvent) => {
               <CardDescription>Set up the main details of your challenge</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="challenge-image">Challenge Cover Image (optional)</Label>
+                {challengeImage ? (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                    <img 
+                      src={URL.createObjectURL(challengeImage)} 
+                      alt="Challenge preview" 
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{challengeImage.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(challengeImage.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setChallengeImage(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : existingImageUrl && isEditMode ? (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                    <img 
+                      src={existingImageUrl.startsWith('http') ? existingImageUrl : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${existingImageUrl}`}
+                      alt="Current challenge image" 
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Current image</p>
+                      <p className="text-xs text-muted-foreground">
+                        Upload a new image to replace
+                      </p>
+                    </div>
+                    <Input
+                      id="challenge-image"
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setChallengeImage(file);
+                      }}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('challenge-image')?.click()}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    id="challenge-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                    className="cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setChallengeImage(file);
+                      }
+                    }}
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Upload a cover image for your challenge. Supported formats: PNG, JPG, GIF, WEBP (max 5MB)
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="name">Challenge Name</Label>
                 <Input 
@@ -246,6 +446,37 @@ const handleSubmit = async (e: React.FormEvent) => {
                       <SelectItem value="easy">Easy</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="requiredLevel">Required Level</Label>
+                  <Select 
+                    value={requiredLevel.toString()} 
+                    onValueChange={(value) => setRequiredLevel(Number(value))}
+                    disabled={levelsLoading}
+                  >
+                    <SelectTrigger id="requiredLevel">
+                      <SelectValue placeholder={levelsLoading ? "Loading levels..." : "Select level"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {levelsLoading ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        </div>
+                      ) : levels && levels.length > 0 ? (
+                        levels
+                          .filter(level => level.isActive)
+                          .sort((a, b) => a.number - b.number)
+                          .map((level) => (
+                            <SelectItem key={level.id} value={level.number.toString()}>
+                              Level {level.number}: {level.name} ({level.minXP}{level.maxXP ? ` - ${level.maxXP}` : '+'} XP)
+                            </SelectItem>
+                          ))
+                      ) : (
+                        <SelectItem value="1" disabled>No levels available</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -361,60 +592,62 @@ const handleSubmit = async (e: React.FormEvent) => {
                       />
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor={`stage-gps-${stage.id}`}>GPS Coordinates *</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            id={`stage-gps-${stage.id}`} 
-                            placeholder="Latitude, Longitude (e.g., 40.7128, -74.0060)" 
-                            value={stage.gps}
-                            onChange={(e) => {
+                    {/* GPS coordinates and radius removed - GPS functionality disabled */}
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`stage-qr-${stage.id}`}>QR Code Image *</Label>
+                      {stage.qrCodeFile ? (
+                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{stage.qrCodeFile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(stage.qrCodeFile.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
                               const updatedStages = stages.map(s => 
-                                s.id === stage.id ? { ...s, gps: e.target.value } : s
+                                s.id === stage.id ? { ...s, qrCodeFile: null, qrCode: undefined } : s
                               );
                               setStages(updatedStages);
                             }}
-                            required
-                          />
-                          <Button type="button" variant="outline" size="icon" title="Get current location">
-                            <MapPin className="w-4 h-4" />
+                          >
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor={`stage-radius-${stage.id}`}>Radius (meters)</Label>
-                        <Input 
-                          id={`stage-radius-${stage.id}`} 
-                          type="number" 
-                          placeholder="50" 
-                          value={stage.radius || 50}
-                          onChange={(e) => {
-                            const updatedStages = stages.map(s => 
-                              s.id === stage.id ? { ...s, radius: Number(e.target.value) || 50 } : s
-                            );
-                            setStages(updatedStages);
-                          }}
-                          min="1"
-                          max="1000"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`stage-qr-${stage.id}`}>QR Code (optional)</Label>
-                      <Input 
-                        id={`stage-qr-${stage.id}`} 
-                        placeholder="QR code identifier (optional)" 
-                        value={stage.qrCode || ""}
-                        onChange={(e) => {
-                          const updatedStages = stages.map(s => 
-                            s.id === stage.id ? { ...s, qrCode: e.target.value || undefined } : s
-                          );
-                          setStages(updatedStages);
-                        }}
-                      />
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`stage-qr-${stage.id}`}
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                            className="cursor-pointer"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const updatedStages = stages.map(s => 
+                                  s.id === stage.id ? { ...s, qrCodeFile: file, qrCode: undefined } : s
+                                );
+                                setStages(updatedStages);
+                              }
+                            }}
+                          />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground cursor-help">
+                                Upload a QR code image. Players will scan this to unlock the next stage.
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Supported formats: PNG, JPG, GIF, WEBP (max 2MB)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -22,6 +22,7 @@ import { AuthController } from './controllers/authController';
 import { ChallengeController } from './controllers/challengeController';
 import { LeaderboardController } from './controllers/leaderboardController';
 import { CategoryController } from './controllers/categoryController';
+import { LevelController } from './controllers/levelController';
 
 // Import middleware
 import { authenticateToken, requireAdmin, optionalAuth } from './middleware/auth';
@@ -103,6 +104,20 @@ apiRouter.post('/categories', authenticateToken, requireAdmin, CategoryControlle
 apiRouter.put('/categories/:id', authenticateToken, requireAdmin, CategoryController.updateCategory);
 apiRouter.delete('/categories/:id', authenticateToken, requireAdmin, CategoryController.deleteCategory);
 apiRouter.patch('/categories/:id/toggle-status', authenticateToken, requireAdmin, CategoryController.toggleCategoryStatus);
+
+// Level routes
+apiRouter.get('/levels', LevelController.getLevels);
+apiRouter.get('/levels/:id', LevelController.getLevelById);
+apiRouter.post('/levels', authenticateToken, requireAdmin, LevelController.createLevel);
+apiRouter.put('/levels/:id', authenticateToken, requireAdmin, LevelController.updateLevel);
+apiRouter.delete('/levels/:id', authenticateToken, requireAdmin, LevelController.deleteLevel);
+apiRouter.post('/levels/update-all-users', authenticateToken, requireAdmin, LevelController.updateAllUserLevels);
+
+// User routes (admin only)
+import { UserController } from './controllers/userController';
+apiRouter.get('/users', authenticateToken, requireAdmin, UserController.getAllUsers);
+apiRouter.get('/users/:id', authenticateToken, requireAdmin, UserController.getUserById);
+apiRouter.patch('/users/:id/toggle-status', authenticateToken, requireAdmin, UserController.toggleUserStatus);
 
 // Mount API routes
 app.use('/api', apiRouter);

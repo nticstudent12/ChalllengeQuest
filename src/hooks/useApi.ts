@@ -151,6 +151,15 @@ export const useCategories = (includeInactive = false) => {
   });
 };
 
+// Level hooks
+export const useLevels = (includeInactive = false) => {
+  return useQuery({
+    queryKey: ['levels', includeInactive],
+    queryFn: () => apiClient.getLevels(includeInactive),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
 export const useCreateCategory = () => {
   const queryClient = useQueryClient();
 
@@ -158,6 +167,19 @@ export const useCreateCategory = () => {
     mutationFn: (data: Parameters<typeof apiClient.createCategory>[0]) => apiClient.createCategory(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+};
+
+export const useCreateChallenge = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof apiClient.createChallenge>[0]) => apiClient.createChallenge(data),
+    onSuccess: () => {
+      // Invalidate challenges queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['challenges'] });
+      queryClient.invalidateQueries({ queryKey: ['leaderboardStats'] });
     },
   });
 };

@@ -30,16 +30,20 @@ const AnimatedText = React.forwardRef<HTMLElement, AnimatedTextProps>(
       none: "",
     };
 
-    return (
-      <Component
-        ref={ref as any}
-        className={cn(baseClasses, effectClasses[effect], className)}
-        style={{ animationDelay: `${delay}ms` }}
-        {...props}
-      >
-        {children}
-      </Component>
-    );
+    // Type-safe component rendering
+    const componentProps = {
+      ref: ref as React.Ref<HTMLElement>,
+      className: cn(baseClasses, effectClasses[effect], className),
+      style: { animationDelay: `${delay}ms` },
+      ...props,
+    };
+
+    if (Component === "h1") return <h1 {...componentProps}>{children}</h1>;
+    if (Component === "h2") return <h2 {...componentProps}>{children}</h2>;
+    if (Component === "h3") return <h3 {...componentProps}>{children}</h3>;
+    if (Component === "h4") return <h4 {...componentProps}>{children}</h4>;
+    if (Component === "p") return <p {...componentProps}>{children}</p>;
+    return <span {...componentProps}>{children}</span>;
   }
 );
 AnimatedText.displayName = "AnimatedText";

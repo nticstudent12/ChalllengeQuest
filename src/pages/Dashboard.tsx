@@ -11,16 +11,14 @@ import {
 } from "@/components/ui/select";
 import ChallengeCard from "@/components/ChallengeCard";
 import {
-  Crown,
   Search,
   Trophy,
   Zap,
   Target,
   LogOut,
-  User,
   Loader2,
-  ShieldCheck,
 } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -29,19 +27,13 @@ import {
   useUserChallenges,
   useAuth,
   useCategories,
+  useLevels,
 } from "@/hooks/useApi";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import ThemeToggle from "@/components/ThemeToggle";
 import { toast } from "@/components/ui/sonner";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -52,8 +44,9 @@ const Dashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
 
-  // Fetch categories from backend
+  // Fetch categories and levels from backend
   const { data: categories, isLoading: categoriesLoading } = useCategories(false);
+  const { data: levels = [], isLoading: levelsLoading } = useLevels(false);
   
   // Fetch user profile and challenges
   const {
@@ -139,13 +132,11 @@ const Dashboard = () => {
       setTimeout(() => {
         window.location.reload();
       }, 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong. Try again later.";
       toast({
         title: "⚠️ Failed to join challenge",
-        description:
-          error?.message ||
-          error?.response?.data?.error ||
-          "Something went wrong. Try again later.",
+        description: errorMessage,
         duration: 3000,
         className:
           "border-red-500 bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100",
@@ -179,24 +170,58 @@ const Dashboard = () => {
     return `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`;
   };
 
-  // Filter challenges based on search query
+  // Filter challenges based on search query and user level
   const filteredChallenges =
     challengesData?.challenges.filter(
-      (challenge) =>
-        challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        challenge.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (challenge) => {
+        // Filter by search query
+        const matchesSearch = 
+          challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          challenge.description.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Filter by user level - only show challenges user can join
+        const canJoin = !profile || challenge.requiredLevel <= (profile.level || 1);
+        
+        return matchesSearch && canJoin;
+      }
     ) || [];
 
   // Get active challenges count
   const activeChallengesCount =
     userChallenges?.filter((cp) => cp.status === "ACTIVE").length || 0;
 
-  // Calculate XP progress (simplified - you might want to implement proper level calculation)
-  const currentLevelXP = profile ? (profile.level - 1) * 1000 : 0;
-  const nextLevelXP = profile ? profile.level * 1000 : 1000;
-  const xpProgress = profile
-    ? ((profile.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
-    : 0;
+  // Calculate XP progress based on actual level system
+  const currentLevelInfo = React.useMemo(() => {
+    if (!profile || levels.length === 0) return null;
+    
+    // Find the current level based on user's XP
+    const currentLevel = levels.find(
+      (level) => 
+        level.isActive &&
+        profile.xp >= level.minXP &&
+        (level.maxXP === null || level.maxXP === undefined || profile.xp <= level.maxXP)
+    );
+    
+    return currentLevel || levels.find(l => l.isActive && l.number === 1) || null;
+  }, [profile, levels]);
+
+  const nextLevelInfo = React.useMemo(() => {
+    if (!currentLevelInfo || levels.length === 0) return null;
+    
+    // Find the next level
+    const nextLevel = levels
+      .filter(l => l.isActive && l.number > currentLevelInfo.number)
+      .sort((a, b) => a.number - b.number)[0];
+    
+    return nextLevel || null;
+  }, [currentLevelInfo, levels]);
+
+  // Calculate XP progress for current level
+  const currentLevelXP = currentLevelInfo?.minXP || 0;
+  const nextLevelXP = nextLevelInfo?.minXP || (currentLevelInfo?.maxXP ?? currentLevelInfo?.minXP ?? 0);
+  const xpProgress = profile && nextLevelXP > currentLevelXP
+    ? Math.min(100, Math.max(0, ((profile.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100))
+    : 100;
 
   if (profileLoading) {
     return (
@@ -223,124 +248,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
-          <div
-            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
-            onClick={() => navigate("/")}>
-            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
-              ChallengeQuest
-            </span>
-          </div>
-
-          <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" onClick={() => navigate("/dashboard")} className="text-sm">
-                  {t("navigation.dashboard")}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View your dashboard with all challenges</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" onClick={() => navigate("/leaderboard")} className="text-sm">
-                  {t("navigation.leaderboard")}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View leaderboard rankings</p>
-              </TooltipContent>
-            </Tooltip>
-            {profile?.isAdmin && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate("/admin")}
-                    className="text-accent hover:text-accent/80 text-sm"
-                  >
-                    <ShieldCheck className="w-4 h-4 mr-2" />
-                    Admin
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Access admin dashboard</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </nav>
-
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-            <LanguageSwitcher />
-            <ThemeToggle />
-            {/* Mobile navigation buttons */}
-            <div className="flex items-center gap-1 sm:gap-2 lg:hidden">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate("/leaderboard")}
-                    className="h-9 w-9"
-                  >
-                    <Trophy className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View leaderboard rankings</p>
-                </TooltipContent>
-              </Tooltip>
-              {profile?.isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => navigate("/admin")}
-                      className="text-accent hover:text-accent/80 h-9 w-9"
-                    >
-                      <ShieldCheck className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Access admin dashboard</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/profile")}
-                  className="h-9 w-9 sm:h-10 sm:w-10"
-                >
-                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View your profile</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 sm:h-10 sm:w-10">
-                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Logout from your account</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      </header>
+      <Navbar variant="client" />
 
       <div className="container mx-auto px-4 py-8">
         {/* User Stats */}
@@ -370,7 +278,12 @@ const Dashboard = () => {
                   {t("dashboard.levelProgress")}
                 </span>
                 <span className="font-semibold">
-                  {profile?.xp || 0} / {nextLevelXP} {t("leaderboard.xp")}
+                  {profile?.xp || 0} / {nextLevelXP || '∞'} {t("leaderboard.xp")}
+                  {currentLevelInfo && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (Level {currentLevelInfo.number}: {currentLevelInfo.name})
+                    </span>
+                  )}
                 </span>
               </div>
               <Progress value={xpProgress} className="h-3" />
@@ -441,7 +354,7 @@ const Dashboard = () => {
               <SelectValue placeholder={t("dashboard.difficulty")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("dashboard.allLevels")}</SelectItem>
+              <SelectItem value="all">{t("dashboard.allDifficulties")}</SelectItem>
               <SelectItem value="easy">{t("dashboard.easy")}</SelectItem>
               <SelectItem value="medium">{t("dashboard.medium")}</SelectItem>
               <SelectItem value="hard">{t("dashboard.hard")}</SelectItem>
@@ -508,6 +421,7 @@ const Dashboard = () => {
                           | "hard"
                       }
                       xpReward={challenge.xpReward}
+                      requiredLevel={challenge.requiredLevel}
                       deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                       participants={challenge._count.progress}
                       status={status as "available" | "active" | "completed"}
@@ -550,6 +464,8 @@ const Dashboard = () => {
                           | "hard"
                       }
                       xpReward={challenge.xpReward}
+                      image={challenge.image}
+                      requiredLevel={challenge.requiredLevel}
                       deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                       participants={challenge._count.progress}
                       status="active"
@@ -566,10 +482,15 @@ const Dashboard = () => {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredChallenges
                 .filter(
-                  (challenge) =>
-                    !userChallenges?.some(
+                  (challenge) => {
+                    // Not already joined
+                    const notJoined = !userChallenges?.some(
                       (uc) => uc.challengeId === challenge.id
-                    )
+                    );
+                    // User level is sufficient
+                    const canJoin = !profile || challenge.requiredLevel <= (profile.level || 1);
+                    return notJoined && canJoin;
+                  }
                 )
                 .map((challenge) => (
                   <ChallengeCard
@@ -585,6 +506,7 @@ const Dashboard = () => {
                         | "hard"
                     }
                     xpReward={challenge.xpReward}
+                    image={challenge.image}
                     deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                     participants={challenge._count.progress}
                     status="available"
@@ -619,6 +541,8 @@ const Dashboard = () => {
                           | "hard"
                       }
                       xpReward={challenge.xpReward}
+                      image={challenge.image}
+                      requiredLevel={challenge.requiredLevel}
                       deadline="Completed"
                       participants={challenge._count.progress}
                       status="completed"

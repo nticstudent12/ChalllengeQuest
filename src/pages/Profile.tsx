@@ -5,9 +5,6 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  LogOut,
-  User,
-  Crown,
   Mail,
   Calendar,
   Shield,
@@ -17,7 +14,9 @@ import {
   Target,
   Award,
   Activity,
+  User,
 } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,13 +27,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile, useAuth, useUserChallenges, useUserRank } from "@/hooks/useApi";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import ThemeToggle from "@/components/ThemeToggle";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const Profile = () => {
   console.log("🌍 API base URL =", import.meta.env.VITE_API_URL);
@@ -191,39 +183,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
-          <div
-            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
-            onClick={() => navigate("/dashboard")}>
-            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
-              ChallengeQuest
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-            <LanguageSwitcher />
-            <ThemeToggle />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleLogout}
-                  className="h-9 w-9 sm:h-10 sm:w-10"
-                >
-                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Logout from your account</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      </header>
+      <Navbar variant="client" />
 
       {/* Profile Content */}
       <main className="container mx-auto px-4 py-10 space-y-8 max-w-6xl">

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { FloatingCard } from "@/components/ui/floating-card";
 import { Progress } from "@/components/ui/progress";
-import { MapPin, Clock, Trophy, Users } from "lucide-react";
+import { MapPin, Clock, Trophy, Users, Award } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface ChallengeCardProps {
@@ -14,7 +14,8 @@ interface ChallengeCardProps {
   category: string;
   difficulty: "easy" | "medium" | "hard";
   xpReward: number;
-  
+  image?: string;
+  requiredLevel?: number;
   deadline: string;
   participants: number;
   stagesCompleted?: number;
@@ -30,6 +31,8 @@ const ChallengeCard = ({
   category,
   difficulty,
   xpReward,
+  image,
+  requiredLevel,
   deadline,
   participants,
   stagesCompleted = 0,
@@ -47,19 +50,57 @@ const ChallengeCard = ({
   };
 
   const progressPercentage = (stagesCompleted / totalStages) * 100;
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const imageUrl = image ? (image.startsWith('http') ? image : `${API_BASE_URL.replace('/api', '')}/uploads/${image}`) : null;
 
   return (
     <FloatingCard floating glow>
-    <Card className="glass-card border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[var(--shadow-glow-primary)] group">
-      <CardHeader>
-        <div className="flex items-start justify-between mb-2">
-          <Badge variant="outline" className="text-xs">
-            {category}
-          </Badge>
-          <Badge className={`${difficultyColors[difficulty]} text-foreground`}>
-            {difficulty.toUpperCase()}
-          </Badge>
+    <Card className="glass-card border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[var(--shadow-glow-primary)] group overflow-hidden">
+      {imageUrl && (
+        <div className="relative w-full h-48 overflow-hidden">
+          <img 
+            src={imageUrl} 
+            alt={title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent" />
+          <div className="absolute top-3 right-3">
+            <Badge className={`${difficultyColors[difficulty]} text-foreground`}>
+              {difficulty.toUpperCase()}
+            </Badge>
+          </div>
+          <div className="absolute top-3 left-3 flex gap-2">
+            <Badge variant="outline" className="text-xs bg-background/80 backdrop-blur-sm">
+              {category}
+            </Badge>
+            {requiredLevel && (
+              <Badge variant="outline" className="text-xs bg-background/80 backdrop-blur-sm">
+                <Award className="w-3 h-3 mr-1" />
+                Lv {requiredLevel}
+              </Badge>
+            )}
+          </div>
         </div>
+      )}
+      <CardHeader className={imageUrl ? "pt-4" : ""}>
+        {!imageUrl && (
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-xs">
+                {category}
+              </Badge>
+              {requiredLevel && (
+                <Badge variant="outline" className="text-xs">
+                  <Award className="w-3 h-3 mr-1" />
+                  Lv {requiredLevel}
+                </Badge>
+              )}
+            </div>
+            <Badge className={`${difficultyColors[difficulty]} text-foreground`}>
+              {difficulty.toUpperCase()}
+            </Badge>
+          </div>
+        )}
         <CardTitle className="text-xl group-hover:text-primary transition-colors">{title}</CardTitle>
         <CardDescription className="line-clamp-2">{description}</CardDescription>
       </CardHeader>

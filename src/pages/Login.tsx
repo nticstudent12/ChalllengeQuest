@@ -35,7 +35,7 @@ const Login = () => {
         title: "❌ Login failed",
         description:
           loginError.message ||
-          (loginError as any).error ||
+          (loginError instanceof Error ? loginError.message : undefined) ||
           t("auth.loginFailed"),
         duration: 3000,
         className:
@@ -84,14 +84,14 @@ const Login = () => {
         });
         navigate("/dashboard");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login failed:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Invalid email or password.";
       toast({
         title: "❌ Login failed",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Invalid email or password.",
+        description: errorMessage,
         duration: 3000,
         variant: "destructive",
       });

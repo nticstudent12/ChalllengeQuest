@@ -8,22 +8,14 @@ import {
   Map,
   Zap,
   Target,
-  Crown,
-  LogOut,
   CheckCircle,
   Users,
 } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import ThemeToggle from "@/components/ThemeToggle";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useApi";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import ParticlesBackground from "@/components/ParticlesBackground";
 import AnimatedGradient from "@/components/AnimatedGradient";
 import FloatingShapes from "@/components/FloatingShapes";
@@ -97,58 +89,7 @@ const Landing = () => {
         <ParticlesBackground />
       </div>
       
-      {/* Navigation */}
-      <nav className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50 relative">
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink">
-            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
-              ChallengeQuest
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-            <LanguageSwitcher />
-            <ThemeToggle />
-
-            {!isAuthenticated ? (
-              <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate("/login")}
-                  className="hidden sm:inline-flex text-sm"
-                >
-                  {t("navigation.login")}
-                </Button>
-                <Button 
-                  variant="hero" 
-                  onClick={() => navigate("/register")}
-                  className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10"
-                >
-                  <span className="hidden sm:inline">{t("landing.getStarted")}</span>
-                  <span className="sm:hidden">Start</span>
-                </Button>
-              </>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleLogout}
-                    className="h-9 w-9 sm:h-10 sm:w-10"
-                  >
-                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Logout from your account</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      </nav>
+      <Navbar variant="default" />
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center relative z-10">

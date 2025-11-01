@@ -1,7 +1,57 @@
 import { PrismaClient, Difficulty, ProgressStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
+
+// Helper function to save base64 image to file
+const saveBase64Image = (base64String: string, filenamePrefix: string = 'qr', maxSizeMB: number = 2): string => {
+  const uploadDir = process.env.UPLOAD_DIR || './uploads';
+  
+  // Ensure upload directory exists
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  // Parse base64 string
+  // Format: data:image/png;base64,iVBORw0KGgo...
+  const base64Match = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+  
+  if (!base64Match) {
+    throw new Error('Invalid base64 image format');
+  }
+
+  const [, imageType, base64Data] = base64Match;
+  
+  // Validate image type
+  const validTypes = ['png', 'jpeg', 'jpg', 'gif', 'webp'];
+  if (!validTypes.includes(imageType.toLowerCase())) {
+    throw new Error(`Unsupported image type: ${imageType}. Supported types: ${validTypes.join(', ')}`);
+  }
+
+  // Determine file extension
+  const extension = imageType === 'jpeg' ? 'jpg' : imageType.toLowerCase();
+
+  // Generate unique filename
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  const filename = `${filenamePrefix}-${uniqueSuffix}.${extension}`;
+  const filePath = path.join(uploadDir, filename);
+
+  // Convert base64 to buffer and save
+  const buffer = Buffer.from(base64Data, 'base64');
+  
+  // Validate file size
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  if (buffer.length > maxSizeBytes) {
+    throw new Error(`Image must be smaller than ${maxSizeMB}MB`);
+  }
+
+  fs.writeFileSync(filePath, buffer);
+
+  // Return the filename (relative path for storage)
+  return filename;
+};
 
 // Validation schemas
 export const createChallengeSchema = z.object({
@@ -12,14 +62,16 @@ export const createChallengeSchema = z.object({
   xpReward: z.number().min(1, 'XP reward must be positive'),
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
+  image: z.string().optional(),
+  requiredLevel: z.number().min(1, 'Required level must be at least 1').optional().default(1),
   maxParticipants: z.number().optional(),
   stages: z.array(z.object({
     title: z.string().min(1, 'Stage title is required'),
     description: z.string().min(1, 'Stage description is required'),
     order: z.number().min(1, 'Stage order must be positive'),
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    radius: z.number().min(1).max(1000).default(50),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+    radius: z.number().min(1).max(1000).default(50).optional(),
     qrCode: z.string().optional()
   })).min(1, 'At least one stage is required')
 });
@@ -60,6 +112,60 @@ export class ChallengeService {
       throw new Error('Start date cannot be in the past');
     }
 
+    // Process stages and handle QR code uploads
+    const stagesData = await Promise.all(
+      validatedData.stages.map(async (stage) => {
+        let qrCodePath: string | undefined = undefined;
+
+        // If qrCode is provided, check if it's base64 or already a file path
+        if (stage.qrCode) {
+          // Check if it's a base64 string (starts with data:image/)
+          if (stage.qrCode.startsWith('data:image/')) {
+            try {
+              // Save base64 image to file
+              qrCodePath = saveBase64Image(stage.qrCode, `qr-stage-${stage.order}`);
+            } catch (error) {
+              throw new Error(
+                `Failed to save QR code for stage ${stage.order}: ${error instanceof Error ? error.message : 'Unknown error'}`
+              );
+            }
+          } else {
+            // Assume it's already a file path (for backward compatibility)
+            qrCodePath = stage.qrCode;
+          }
+        }
+
+      return {
+        title: stage.title,
+        description: stage.description,
+        order: stage.order,
+        latitude: stage.latitude || 0, // Default to 0 if not provided (GPS disabled)
+        longitude: stage.longitude || 0, // Default to 0 if not provided (GPS disabled)
+        radius: stage.radius || 50,
+        qrCode: qrCodePath
+      };
+      })
+    );
+
+    // Process challenge image if provided
+    let challengeImagePath: string | undefined = undefined;
+    if (validatedData.image) {
+      // Check if it's a base64 string (starts with data:image/)
+      if (validatedData.image.startsWith('data:image/')) {
+        try {
+          // Save base64 image to file (5MB max for challenge images)
+          challengeImagePath = saveBase64Image(validatedData.image, 'challenge', 5);
+        } catch (error) {
+          throw new Error(
+            `Failed to save challenge image: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        }
+      } else {
+        // Assume it's already a file path (for backward compatibility)
+        challengeImagePath = validatedData.image;
+      }
+    }
+
     // Create challenge with stages
     const challenge = await prisma.challenge.create({
       data: {
@@ -70,17 +176,11 @@ export class ChallengeService {
         xpReward: validatedData.xpReward,
         startDate,
         endDate,
+        image: challengeImagePath,
+        requiredLevel: validatedData.requiredLevel ?? 1,
         maxParticipants: validatedData.maxParticipants,
         stages: {
-          create: validatedData.stages.map(stage => ({
-            title: stage.title,
-            description: stage.description,
-            order: stage.order,
-            latitude: stage.latitude,
-            longitude: stage.longitude,
-            radius: stage.radius,
-            qrCode: stage.qrCode
-          }))
+          create: stagesData
         }
       },
       include: {
@@ -252,6 +352,25 @@ static async updateChallenge(id: string, data: z.infer<typeof updateChallengeSch
     }
   }
 
+  // Process challenge image if provided
+  let challengeImagePath: string | undefined = undefined;
+  if (validatedData.image) {
+    // Check if it's a base64 string (starts with data:image/)
+    if (validatedData.image.startsWith('data:image/')) {
+      try {
+        // Save base64 image to file (5MB max for challenge images)
+        challengeImagePath = saveBase64Image(validatedData.image, 'challenge', 5);
+      } catch (error) {
+        throw new Error(
+          `Failed to save challenge image: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    } else {
+      // Assume it's already a file path (for backward compatibility)
+      challengeImagePath = validatedData.image;
+    }
+  }
+
   // Build update data
   const updateData: Prisma.ChallengeUpdateInput = {
     title: validatedData.title ?? existingChallenge.title,
@@ -261,6 +380,8 @@ static async updateChallenge(id: string, data: z.infer<typeof updateChallengeSch
     xpReward: validatedData.xpReward ?? existingChallenge.xpReward,
     startDate: validatedData.startDate ? new Date(validatedData.startDate) : existingChallenge.startDate,
     endDate: validatedData.endDate ? new Date(validatedData.endDate) : existingChallenge.endDate,
+    image: challengeImagePath !== undefined ? challengeImagePath : existingChallenge.image,
+    requiredLevel: validatedData.requiredLevel ?? existingChallenge.requiredLevel,
     maxParticipants: validatedData.maxParticipants ?? existingChallenge.maxParticipants,
     isActive: typeof validatedData.isActive === 'boolean' ? validatedData.isActive : existingChallenge.isActive,
   };
@@ -272,17 +393,44 @@ static async updateChallenge(id: string, data: z.infer<typeof updateChallengeSch
       where: { challengeId: id },
     });
 
+    // Process stages and handle QR code uploads
+    const stagesData = await Promise.all(
+      validatedData.stages.map(async (stage) => {
+        let qrCodePath: string | undefined = undefined;
+
+        // If qrCode is provided, check if it's base64 or already a file path
+        if (stage.qrCode) {
+          // Check if it's a base64 string (starts with data:image/)
+          if (stage.qrCode.startsWith('data:image/')) {
+            try {
+              // Save base64 image to file
+              qrCodePath = saveBase64Image(stage.qrCode, `qr-stage-${stage.order}`);
+            } catch (error) {
+              throw new Error(
+                `Failed to save QR code for stage ${stage.order}: ${error instanceof Error ? error.message : 'Unknown error'}`
+              );
+            }
+          } else {
+            // Assume it's already a file path (for backward compatibility)
+            qrCodePath = stage.qrCode;
+          }
+        }
+
+        return {
+          title: stage.title,
+          description: stage.description,
+          order: stage.order,
+          latitude: stage.latitude ?? 0, // Default to 0 if not provided (GPS disabled)
+          longitude: stage.longitude ?? 0, // Default to 0 if not provided (GPS disabled)
+          radius: stage.radius ?? 50,
+          qrCode: qrCodePath,
+        };
+      })
+    );
+
     // Recreate stages
     updateData.stages = {
-      create: validatedData.stages.map(stage => ({
-        title: stage.title,
-        description: stage.description,
-        order: stage.order,
-        latitude: stage.latitude,
-        longitude: stage.longitude,
-        radius: stage.radius,
-        qrCode: stage.qrCode,
-      })),
+      create: stagesData,
     };
   }
 
@@ -362,6 +510,20 @@ static async deleteChallenge(id: string) {
 
     if (now > challenge.endDate) {
       throw new Error('Challenge has ended');
+    }
+
+    // Check user level requirement
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { level: true }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.level < challenge.requiredLevel) {
+      throw new Error(`You need to be at least level ${challenge.requiredLevel} to join this challenge. Your current level is ${user.level}.`);
     }
 
     // Check if user already joined
@@ -457,17 +619,48 @@ static async deleteChallenge(id: string) {
       throw new Error('Stage already completed');
     }
 
-    // Validate location (simplified - you can add more sophisticated GPS validation)
-    const distance = this.calculateDistance(
-      validatedData.latitude,
-      validatedData.longitude,
-      stage.latitude,
-      stage.longitude
-    );
+    // Validate QR code requirement
+    if (stage.qrCode) {
+      // If stage has QR code, submission must be QR_CODE type
+      if (validatedData.submissionType !== 'QR_CODE') {
+        throw new Error('This stage requires QR code scanning');
+      }
 
-    if (distance > stage.radius) {
-      throw new Error(`You must be within ${stage.radius}m of the stage location`);
+      // QR code content must be provided
+      if (!validatedData.content || validatedData.content.trim() === '') {
+        throw new Error('QR code data is required. Please scan the QR code.');
+      }
+
+      // Validate QR code matches stage (QR code should contain stage ID or unique identifier)
+      // For now, we'll accept any QR code data, but you can enhance this to validate
+      // against stored QR code data or require specific format
+      // The QR code should ideally contain the stage ID or a unique code
+      const scannedData = validatedData.content.trim();
+      
+      // Optional: Validate QR code contains stage ID (if using that format)
+      // Uncomment if QR codes contain stage ID:
+      // if (!scannedData.includes(stage.id)) {
+      //   throw new Error('Invalid QR code. This QR code does not match this stage.');
+      // }
+    } else {
+      // If stage doesn't have QR code, but submission type is QR_CODE, that's invalid
+      if (validatedData.submissionType === 'QR_CODE') {
+        throw new Error('This stage does not require QR code scanning');
+      }
     }
+
+    // GPS validation is disabled - only validate QR code if stage has one
+    // Location validation commented out as GPS functionality is disabled
+    // const distance = this.calculateDistance(
+    //   validatedData.latitude,
+    //   validatedData.longitude,
+    //   stage.latitude,
+    //   stage.longitude
+    // );
+
+    // if (distance > stage.radius) {
+    //   throw new Error(`You must be within ${stage.radius}m of the stage location`);
+    // }
 
     // Create or update stage progress
     const stageProgress = await prisma.stageProgress.upsert({

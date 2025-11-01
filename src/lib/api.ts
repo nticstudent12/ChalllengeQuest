@@ -33,6 +33,7 @@ export interface User {
   level: number;
   rank?: number;
   isAdmin: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -92,6 +93,8 @@ export interface CreateChallengeRequest {
   xpReward: number;
   startDate: string; // ISO format date string (datetime)
   endDate: string; // ISO format date string (datetime) - REQUIRED
+  image?: string; // optional - base64 image string
+  requiredLevel?: number; // optional, defaults to 1
   maxParticipants?: number; // optional
   stages: CreateStageRequest[];
 }
@@ -104,6 +107,8 @@ export interface Challenge {
   xpReward: number;
   startDate: string;
   endDate: string;
+  image?: string;
+  requiredLevel: number;
   isActive: boolean;
   maxParticipants?: number;
   createdAt: string;
@@ -204,6 +209,34 @@ export interface UpdateCategoryRequest {
   description?: string;
   icon?: string;
   color?: string;
+}
+
+// Level interfaces
+export interface Level {
+  id: string;
+  number: number;
+  name: string;
+  minXP: number;
+  maxXP?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLevelRequest {
+  number: number;
+  name: string;
+  minXP: number;
+  maxXP?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateLevelRequest {
+  number?: number;
+  name?: string;
+  minXP?: number;
+  maxXP?: number;
+  isActive?: boolean;
 }
 
 // API client class
@@ -357,6 +390,36 @@ if (this.token) {
   return response.data!;
 }
 
+  async updateChallenge(id: string, data: Partial<CreateChallengeRequest>): Promise<Challenge> {
+    if (!this.token) {
+      throw new Error("❌ Unauthorized: You must be logged in to update a challenge");
+    }
+
+    const response = await this.request<Challenge>(`/challenges/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    return response.data!;
+  }
+
+  async deleteChallenge(id: string): Promise<void> {
+    if (!this.token) {
+      throw new Error("❌ Unauthorized: You must be logged in to delete a challenge");
+    }
+
+    await this.request(`/challenges/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+      },
+    });
+  }
+
 
   async submitStage(data: SubmitStageRequest): Promise<StageProgress> {
     const response = await this.request<StageProgress>('/challenges/submit-stage', {
@@ -435,6 +498,82 @@ if (this.token) {
 
   async toggleCategoryStatus(id: string): Promise<Category> {
     const response = await this.request<Category>(`/categories/${id}/toggle-status`, {
+      method: 'PATCH',
+    });
+    return response.data!;
+  }
+
+  // Level methods
+  async getLevels(includeInactive = false): Promise<Level[]> {
+    const endpoint = `/levels${includeInactive ? '?includeInactive=true' : ''}`;
+    const response = await this.request<Level[]>(endpoint);
+    return response.data!;
+  }
+
+  async getLevelById(id: string): Promise<Level> {
+    const response = await this.request<Level>(`/levels/${id}`);
+    return response.data!;
+  }
+
+  async createLevel(data: CreateLevelRequest): Promise<Level> {
+    const response = await this.request<Level>('/levels', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async updateLevel(id: string, data: UpdateLevelRequest): Promise<Level> {
+    const response = await this.request<Level>(`/levels/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async deleteLevel(id: string): Promise<void> {
+    await this.request(`/levels/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateAllUserLevels(): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>('/levels/update-all-users', {
+      method: 'POST',
+    });
+    return response.data!;
+  }
+
+  // User methods (admin only)
+  async getAllUsers(filters?: {
+    search?: string;
+    isActive?: boolean;
+    isAdmin?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ users: User[]; total: number; limit: number; offset: number }> {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined) {
+          params.append(key, value.toString());
+        }
+      });
+    }
+
+    const endpoint = `/users${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await this.request<{ users: User[]; total: number; limit: number; offset: number }>(endpoint);
+    return response.data!;
+  }
+
+  async getUserById(id: string): Promise<User> {
+    const response = await this.request<User>(`/users/${id}`);
+    return response.data!;
+  }
+
+  async toggleUserStatus(id: string): Promise<{ id: string; isActive: boolean }> {
+    const response = await this.request<{ id: string; isActive: boolean }>(`/users/${id}/toggle-status`, {
       method: 'PATCH',
     });
     return response.data!;

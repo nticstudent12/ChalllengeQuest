@@ -68,6 +68,14 @@ const AppContent = () => {
               </AdminRoute>
             }
           />
+          <Route
+            path="/admin/edit-challenge/:id"
+            element={
+              <AdminRoute>
+                <CreateChallenge />
+              </AdminRoute>
+            }
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

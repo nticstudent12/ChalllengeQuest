@@ -39,6 +39,8 @@ model Challenge {
   xpReward        Int
   startDate       DateTime
   endDate         DateTime
+  image           String?
+  requiredLevel   Int                 @default(1)
   isActive        Boolean             @default(true)
   maxParticipants Int?
   createdAt       DateTime            @default(now())
@@ -181,16 +183,29 @@ model Leaderboard {
 }
 
 model Category {
-  id          String      @id @default(cuid())
-  name        String      @unique
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
   icon        String?
   color       String?
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("categories")
+}
+
+model Level {
+  id        String   @id @default(cuid())
+  number    Int      @unique
+  name      String
+  minXP     Int
+  maxXP     Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("levels")
 }
 
 enum Difficulty {

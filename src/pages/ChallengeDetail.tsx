@@ -10,20 +10,22 @@ import {
   Lock,
   QrCode,
   Navigation,
-  Crown,
   Calendar,
-  ArrowLeft,
+  ScanLine,
 } from "lucide-react";
+import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { getChallengeById, Challenge, StageProgress } from "@/lib/api";
+import { getChallengeById, Challenge, StageProgress, apiClient, SubmitStageRequest } from "@/lib/api";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { QRCodeScanner } from "@/components/QRCodeScanner";
+import { toast } from "@/hooks/use-toast";
 const ChallengeDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -31,6 +33,9 @@ const ChallengeDetail = () => {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [currentStageId, setCurrentStageId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // ✅ Fetch challenge from backend
 
@@ -84,6 +89,106 @@ const ChallengeDetail = () => {
     }
     
     return 'LOCKED';
+  };
+
+  // Get user's current location
+  const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by your browser'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          reject(new Error(`Failed to get location: ${error.message}`));
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  };
+
+  // Handle QR code scan success
+  const handleQRScanSuccess = async (decodedText: string) => {
+    if (!currentStageId) return;
+
+    try {
+      setSubmitting(true);
+      
+      // GPS is disabled - use default coordinates
+      // const location = await getCurrentLocation();
+
+      // Find the stage
+      const stage = challenge?.stages.find((s) => s.id === currentStageId);
+      if (!stage) {
+        throw new Error('Stage not found');
+      }
+
+      // Submit stage with QR code (GPS disabled)
+      const submitData: SubmitStageRequest = {
+        stageId: currentStageId,
+        latitude: 0, // GPS disabled
+        longitude: 0, // GPS disabled
+        submissionType: 'QR_CODE',
+        content: decodedText,
+      };
+
+      await apiClient.submitStage(submitData);
+
+      toast({
+        title: "🎯 Stage Completed!",
+        description: "QR code scanned successfully. Stage completed!",
+        duration: 3000,
+      });
+
+      // Refresh challenge data
+      const response = await getChallengeById(id!);
+      setChallenge(response);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to submit stage. Please try again.";
+      toast({
+        title: "❌ Error",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 4000,
+      });
+    } finally {
+      setSubmitting(false);
+      setCurrentStageId(null);
+    }
+  };
+
+  // Handle submit proof button click
+  const handleSubmitProof = (stageId: string) => {
+    const stage = challenge?.stages.find((s) => s.id === stageId);
+    if (!stage) return;
+
+    // If stage has QR code, open scanner
+    if (stage.qrCode) {
+      setCurrentStageId(stageId);
+      setQrScannerOpen(true);
+    } else {
+      // For GPS-only stages, submit with location
+      handleGPSSubmit(stageId);
+    }
+  };
+
+  // GPS-only submission is disabled - all stages require QR codes
+  const handleGPSSubmit = async (stageId: string) => {
+    // This function is no longer used - all stages require QR codes
+    toast({
+      title: "❌ Error",
+      description: "This stage requires QR code scanning. GPS submission is disabled.",
+      variant: "destructive",
+      duration: 4000,
+    });
+    // Legacy GPS submission code removed - GPS functionality is disabled
   };
 
   // ✅ Stage icon display
@@ -143,40 +248,22 @@ const ChallengeDetail = () => {
   const isChallengeUpcoming = new Date() < startDate;
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
-          <div
-            className="flex items-center gap-1 sm:gap-2 cursor-pointer min-w-0 flex-shrink"
-            onClick={() => navigate("/")}>
-            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate">
-              ChallengeQuest
-            </span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate("/dashboard")}
-                className="text-xs sm:text-sm px-2 sm:px-4 h-9 sm:h-10 flex-shrink-0"
-              >
-                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 hidden sm:inline" />
-                <span className="hidden sm:inline">Back to Dashboard</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Return to dashboard</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </header>
+      <Navbar variant="challenge-detail" />
 
       <div className="container mx-auto px-4 py-8">
         {/* Challenge Header */}
-        <div className="glass-card rounded-xl p-8 mb-8 border border-primary/20">
+        <div className="glass-card rounded-xl p-8 mb-8 border border-primary/20 overflow-hidden">
           <div className="flex flex-col md:flex-row gap-6">
+            {/* Challenge Image */}
+            {challenge.image && (
+              <div className="md:w-80 h-64 md:h-auto flex-shrink-0">
+                <img
+                  src={challenge.image.startsWith('http') ? challenge.image : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${challenge.image}`}
+                  alt={challenge.title}
+                  className="w-full h-full object-cover rounded-lg shadow-lg"
+                />
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-4">
                 <Badge variant="outline">{challenge.category}</Badge>
@@ -287,11 +374,7 @@ const ChallengeDetail = () => {
                             <h3 className="text-xl font-bold">
                               Stage {index + 1}: {stage.title}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
-                              <MapPin className="w-3 h-3 inline mr-1" />
-                              {stage.latitude.toFixed(6)}, {stage.longitude.toFixed(6)}
-                              {stage.radius && ` • Radius: ${stage.radius}m`}
-                            </p>
+                            {/* GPS coordinates removed - GPS functionality disabled */}
                           </div>
                         </div>
 
@@ -321,7 +404,20 @@ const ChallengeDetail = () => {
                             </Badge>
                           )}
                           {stageStatus === "PENDING" && isChallengeActive && (
-                            <Button variant="secondary">Submit Proof</Button>
+                            <Button 
+                              variant="secondary" 
+                              onClick={() => handleSubmitProof(stage.id)}
+                              disabled={submitting || currentStageId === stage.id}
+                            >
+                              {hasQrCode ? (
+                                <>
+                                  <ScanLine className="w-4 h-4 mr-2" />
+                                  Scan QR Code
+                                </>
+                              ) : (
+                                "Submit Proof"
+                              )}
+                            </Button>
                           )}
                           {stageStatus === "LOCKED" && (
                             <Button variant="ghost" disabled>
@@ -360,6 +456,17 @@ const ChallengeDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* QR Code Scanner */}
+      <QRCodeScanner
+        open={qrScannerOpen}
+        onClose={() => {
+          setQrScannerOpen(false);
+          setCurrentStageId(null);
+        }}
+        onScanSuccess={handleQRScanSuccess}
+        stageTitle={currentStageId ? challenge?.stages.find(s => s.id === currentStageId)?.title : undefined}
+      />
     </div>
   );
 };
