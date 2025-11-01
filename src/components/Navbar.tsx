@@ -16,7 +16,7 @@ interface NavbarProps {
   /**
    * The variant/style of the navbar
    * - 'client': Fixed client navbar (Logo, Dashboard, Leaderboard, Language, Theme, Profile, Logout)
-   * - 'admin': Fixed admin navbar (Admin Dashboard icon that navigates to AdminDashboard)
+   * - 'admin': Fixed admin navbar (Logo, Dashboard, Leaderboard, Admin Dashboard, Language, Theme, Profile, Logout)
    * - 'default': Standard navbar (Landing - for backward compatibility)
    * - 'profile': Profile page (for backward compatibility)
    * - 'leaderboard': Leaderboard page (for backward compatibility)
@@ -152,6 +152,25 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
               </TooltipContent>
             </Tooltip>
 
+            {/* Admin Dashboard Button - Only show if user is admin */}
+            {isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/admin")}
+                    className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Admin
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Go to admin dashboard</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
             {/* Language Switcher */}
             <LanguageSwitcher />
 
@@ -201,7 +220,7 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
     );
   }
 
-  // Fixed admin variant: Admin Dashboard icon that navigates to AdminDashboard
+  // Fixed admin variant: Logo, Dashboard, Leaderboard, Admin Dashboard, Language, Theme, Profile, Logout
   if (variant === 'admin') {
     return (
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50 shadow-sm">
@@ -220,23 +239,102 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
             </span>
           </div>
 
-          {/* Right side actions - Just Admin Dashboard icon */}
+          {/* Right side actions */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
+            {/* Dashboard Button */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/admin")}
-                  className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                  onClick={() => navigate("/dashboard")}
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
                 >
-                  <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Dashboard
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Admin Dashboard</p>
+                <p>Go to dashboard</p>
               </TooltipContent>
             </Tooltip>
+
+            {/* Leaderboard Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/leaderboard")}
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                >
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Leaderboard
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View leaderboard</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Admin Dashboard Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/admin")}
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Go to admin dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* Profile Icon */}
+            {isAuthenticated && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/profile")}
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View your profile</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Logout Icon */}
+            {isAuthenticated && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:text-destructive transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Logout from your account</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
       </header>
