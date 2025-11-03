@@ -31,14 +31,11 @@ This guide covers deploying SwipeRush (React + Node.js + PostgreSQL) to popular 
 
 1. Click **"+ New"** → **"GitHub Repo"**
 2. Select your repository
-3. **IMMEDIATELY** after creating the service, set the **Root Directory**:
-   - Click on the newly created service
-   - Go to **Settings** → **Variables** tab
-   - Scroll down to find **Root Directory**
-   - Enter: `backend`
-   - Click **"Deploy"** button at top right or wait for auto-deploy
-4. Railway will now detect it's a Node.js project in the backend folder
-5. Configure environment variables in the service settings:
+3. **CRITICAL**: IMMEDIATELY go to **Settings** → **Service** tab
+4. Scroll down to **Root Directory** field
+5. Set **Root Directory** to: `backend`
+6. Save the settings - Railway will auto-redeploy
+7. Configure environment variables in the service settings:
 
 ```env
 NODE_ENV=production
