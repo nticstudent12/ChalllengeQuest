@@ -40,7 +40,11 @@ const server = createServer(app);
 const socketService = initializeSocketService(server);
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,
+}));
 app.use(cors({
   origin: "http://localhost:8081",
   credentials: true,
@@ -56,8 +60,13 @@ app.use(requestLogger);
 // Rate limiting
 app.use(generalRateLimit);
 
-// Static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Static files for uploads with CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:8081');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

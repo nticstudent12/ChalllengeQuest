@@ -213,7 +213,7 @@ const Landing = () => {
       {/* Footer */}
       <footer className="border-t border-border/50 mt-20">
         <div className="container mx-auto px-4 py-8 text-center text-muted-foreground">
-          <p>&copy; 2025 ChallengeQuest. {t("footer.copyright")}</p>
+          <p>&copy; 2025 SwipeRush. {t("footer.copyright")}</p>
         </div>
       </footer>
     </div>

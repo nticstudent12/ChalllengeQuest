@@ -421,6 +421,7 @@ const Dashboard = () => {
                           | "hard"
                       }
                       xpReward={challenge.xpReward}
+                      image={challenge.image}
                       requiredLevel={challenge.requiredLevel}
                       deadline={getDeadlineText(challenge.startDate, challenge.endDate)}
                       participants={challenge._count.progress}

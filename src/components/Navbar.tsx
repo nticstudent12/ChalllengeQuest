@@ -54,13 +54,13 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
       case 'admin':
         return 'Admin Dashboard';
       case 'dashboard':
-        return isAdmin ? 'Admin Dashboard' : 'ChallengeQuest';
+        return isAdmin ? 'Admin Dashboard' : 'SwipeRush';
       case 'profile':
       case 'challenge-detail':
       case 'create-challenge':
       case 'default':
       default:
-        return 'ChallengeQuest';
+        return 'SwipeRush';
     }
   };
 
@@ -112,7 +112,7 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
               <div className="absolute inset-0 bg-primary/20 blur-xl opacity-50 -z-10" />
             </div>
             <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] via-[hsl(263,70%,65%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate drop-shadow-sm">
-              ChallengeQuest
+              SwipeRush
             </span>
           </div>
 
@@ -185,7 +185,7 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
                     variant="ghost"
                     size="icon"
                     onClick={() => navigate("/profile")}
-                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 hover:text-white transition-colors"
                   >
                     <UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
@@ -234,20 +234,21 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
               <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 drop-shadow-sm" />
               <div className="absolute inset-0 bg-primary/20 blur-xl opacity-50 -z-10" />
             </div>
-            <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] via-[hsl(263,70%,65%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate drop-shadow-sm">
-              Admin Dashboard
+            <span className="text-sm sm:text-base md:text-lg lg:text-xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] via-[hsl(263,70%,65%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent truncate drop-shadow-sm">
+              <span className="hidden sm:inline">Admin Dashboard</span>
+              <span className="sm:hidden">Admin</span>
             </span>
           </div>
 
           {/* Right side actions */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-            {/* Dashboard Button */}
+            {/* Dashboard Button - Desktop */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   onClick={() => navigate("/dashboard")}
-                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 hover:text-white transition-colors"
                 >
                   <LayoutDashboard className="w-4 h-4 mr-2" />
                   Dashboard
@@ -257,14 +258,30 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
                 <p>Go to dashboard</p>
               </TooltipContent>
             </Tooltip>
+            {/* Dashboard Button - Mobile */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/dashboard")}
+                  className="sm:hidden h-9 w-9 hover:bg-primary/10 hover:text-white transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Go to dashboard</p>
+              </TooltipContent>
+            </Tooltip>
 
-            {/* Leaderboard Button */}
+            {/* Leaderboard Button - Desktop */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   onClick={() => navigate("/leaderboard")}
-                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 hover:text-white transition-colors"
                 >
                   <Trophy className="w-4 h-4 mr-2" />
                   Leaderboard
@@ -274,17 +291,49 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
                 <p>View leaderboard</p>
               </TooltipContent>
             </Tooltip>
+            {/* Leaderboard Button - Mobile */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/leaderboard")}
+                  className="sm:hidden h-9 w-9 hover:bg-primary/10 hover:text-white transition-colors"
+                >
+                  <Trophy className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View leaderboard</p>
+              </TooltipContent>
+            </Tooltip>
 
-            {/* Admin Dashboard Button */}
+            {/* Admin Dashboard Button - Desktop */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   onClick={() => navigate("/admin")}
-                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 transition-colors"
+                  className="hidden sm:inline-flex text-sm hover:bg-primary/10 hover:text-white transition-colors"
                 >
                   <ShieldCheck className="w-4 h-4 mr-2" />
                   Admin
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Go to admin dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+            {/* Admin Dashboard Button - Mobile */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/admin")}
+                  className="sm:hidden h-9 w-9 hover:bg-primary/10 hover:text-white transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -306,7 +355,7 @@ const Navbar = ({ variant = 'default', title, onTitleClick }: NavbarProps) => {
                     variant="ghost"
                     size="icon"
                     onClick={() => navigate("/profile")}
-                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 transition-colors"
+                    className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-primary/10 hover:text-white transition-colors"
                   >
                     <UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>

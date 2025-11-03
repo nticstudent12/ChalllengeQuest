@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, MapPin, Save, Loader2, X } from "lucide-react";
+import { Plus, MapPin, Save, Loader2, X, Trash2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
@@ -145,7 +145,20 @@ const CreateChallenge = () => {
   };
 
   const addStage = () => {
-    setStages([...stages, { id: stages.length + 1, title: "", description: "", gps: "", radius: 50 }]);
+    const maxId = stages.length > 0 ? Math.max(...stages.map(s => s.id)) : 0;
+    setStages([...stages, { id: maxId + 1, title: "", description: "", gps: "", radius: 50 }]);
+  };
+
+  const removeStage = (stageId: number) => {
+    if (stages.length > 1) {
+      setStages(stages.filter(s => s.id !== stageId));
+    } else {
+      toast({
+        title: "❌ Validation Error",
+        description: "At least one stage is required.",
+        variant: "destructive",
+      });
+    }
   };
 
 const handleSubmit = async (e: React.FormEvent) => {
@@ -556,7 +569,18 @@ const handleSubmit = async (e: React.FormEvent) => {
               {stages.map((stage, index) => (
                 <Card key={stage.id} className="bg-muted/20 border-border/50">
                   <CardHeader>
-                    <CardTitle className="text-lg">Stage {index + 1}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Stage {index + 1}</CardTitle>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => removeStage(stage.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -662,7 +686,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             </Button>
             <Button type="submit" variant="hero">
               <Save className="w-4 h-4 mr-2" />
-              Create Challenge
+              {isEditMode ? "Update Challenge" : "Create Challenge"}
             </Button>
           </div>
         </form>

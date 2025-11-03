@@ -17,6 +17,10 @@ import { useAuth } from "@/hooks/useApi";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { apiClient } from "@/lib/api";
+import ParticlesBackground from "@/components/ParticlesBackground";
+import AnimatedGradient from "@/components/AnimatedGradient";
+import FloatingShapes from "@/components/FloatingShapes";
+import GradientOrbs from "@/components/GradientOrbs";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -46,15 +50,31 @@ const Register = () => {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-background/95">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Multi-Layer Animated Background */}
+      <div className="fixed inset-0 w-full h-full -z-10">
+        {/* Base: Gradient Orbs */}
+        <GradientOrbs />
+        
+        {/* Layer 1: Floating Geometric Shapes */}
+        <FloatingShapes />
+        
+        {/* Layer 2: Animated Gradient Waves */}
+        <AnimatedGradient />
+        
+        {/* Layer 3: Interactive Particles */}
+        <ParticlesBackground />
+      </div>
+      
+      <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+        <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[var(--shadow-glow-primary)]">
               <Crown className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="text-3xl font-bold bg-gradient-to-r from-[hsl(263,70%,60%)] to-[hsl(190,95%,60%)] bg-clip-text text-transparent">
-              ChallengeQuest
+              SwipeRush
             </span>
           </div>
           <p className="text-base text-muted-foreground font-medium">{t("auth.beginJourney")}</p>
@@ -247,6 +267,7 @@ const Register = () => {
             ← {t("common.back")} {t("navigation.home")}
           </Button>
         </div>
+      </div>
       </div>
     </div>
   );

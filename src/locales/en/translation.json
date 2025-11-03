@@ -18,7 +18,8 @@
     "none": "None",
     "yes": "Yes",
     "no": "No",
-    "ok": "OK"
+    "ok": "OK",
+    "or": "OR"
   },
   "navigation": {
     "home": "Home",
@@ -102,6 +103,7 @@
     "category": "Category",
     "difficulty": "Difficulty",
     "allCategories": "All Categories",
+    "allDifficulties": "All Difficulties",
     "allLevels": "All Levels",
     "easy": "Easy",
     "medium": "Medium",
@@ -236,7 +238,7 @@
     "invalidFileType": "Only image and text files are allowed."
   },
   "footer": {
-    "copyright": "© 2025 ChallengeQuest. All rights reserved.",
+    "copyright": "© 2025 SwipeRush. All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
     "contactUs": "Contact Us",

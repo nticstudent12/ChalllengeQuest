@@ -270,16 +270,43 @@ if (this.token) {
         headers,
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // If response is not JSON, check status and provide appropriate error
+        if (!response.ok) {
+          if (response.status === 500 || response.status === 503) {
+            throw new Error('Server error. Please check if the backend server and database are running.');
+          }
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        throw new Error('Invalid response from server');
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Request failed');
+        // Check for database connection errors
+        const errorMessage = data.error || data.message || 'Request failed';
+        
+        // Provide user-friendly message for database connection errors
+        if (errorMessage.includes('database server') || 
+            errorMessage.includes('Can\'t reach database') ||
+            errorMessage.includes('localhost:5433') ||
+            errorMessage.includes('localhost:5432')) {
+          throw new Error('Database connection failed. Please ensure the PostgreSQL database server is running on port 5432 or 5433.');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       return data;
     } catch (error) {
       console.error('API request failed:', error);
-      throw error;
+      // Re-throw with better message if it's already an Error
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Network error. Please check your connection.');
     }
   }
 

@@ -495,7 +495,7 @@ const AdminDashboard = () => {
                           <p className="font-bold text-success">{challenge.completionRate}%</p>
                         </div>
                         <Badge className="bg-success text-success-foreground">{challenge.status}</Badge>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/challenge/${challenge.id}`)}>
                           <Eye className="w-4 h-4" />
                         </Button>
                       </div>
@@ -547,11 +547,21 @@ const AdminDashboard = () => {
                         status = 'completed';
                       }
 
+                      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                      const imageUrl = challenge.image ? (challenge.image.startsWith('http') ? challenge.image : `${API_BASE_URL.replace('/api', '')}/uploads/${challenge.image}`) : null;
+
                       return (
                         <div
                           key={challenge.id}
                           className="flex items-center justify-between p-4 rounded-lg bg-muted/20 border border-border/50 hover:bg-muted/30 transition-colors"
                         >
+                          {imageUrl && (
+                            <img 
+                              src={imageUrl} 
+                              alt={challenge.title}
+                              className="w-20 h-20 object-cover rounded-md mr-4 flex-shrink-0"
+                            />
+                          )}
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <h3 className="font-semibold text-lg">{challenge.title}</h3>

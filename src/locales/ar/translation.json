@@ -18,7 +18,8 @@
     "none": "لا شيء",
     "yes": "نعم",
     "no": "لا",
-    "ok": "موافق"
+    "ok": "موافق",
+    "or": "أو"
   },
   "navigation": {
     "home": "الرئيسية",
@@ -102,6 +103,7 @@
     "category": "الفئة",
     "difficulty": "الصعوبة",
     "allCategories": "جميع الفئات",
+    "allDifficulties": "جميع الصعوبات",
     "allLevels": "جميع المستويات",
     "easy": "سهل",
     "medium": "متوسط",
@@ -236,7 +238,7 @@
     "invalidFileType": "يُسمح فقط بملفات الصور والنصوص."
   },
   "footer": {
-    "copyright": "© 2025 ChallengeQuest. جميع الحقوق محفوظة.",
+    "copyright": "© 2025 SwipeRush. جميع الحقوق محفوظة.",
     "privacyPolicy": "سياسة الخصوصية",
     "termsOfService": "شروط الخدمة",
     "contactUs": "اتصل بنا",

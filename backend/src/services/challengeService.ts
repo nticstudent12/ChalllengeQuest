@@ -2,8 +2,47 @@ import { PrismaClient, Difficulty, ProgressStatus, Prisma } from '@prisma/client
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
+import QRCode from 'qrcode';
 
 const prisma = new PrismaClient();
+
+// Helper function to generate QR code with stage ID encoded
+const generateQRCode = async (stageId: string, filenamePrefix: string = 'qr'): Promise<string> => {
+  const uploadDir = process.env.UPLOAD_DIR || './uploads';
+  
+  // Ensure upload directory exists
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  // Generate QR code data as base64 string
+  const qrCodeDataUrl = await QRCode.toDataURL(stageId, {
+    errorCorrectionLevel: 'H',
+    type: 'image/png',
+    width: 500,
+    margin: 1
+  });
+
+  // Parse the data URL to get base64 data
+  const base64Match = qrCodeDataUrl.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+  if (!base64Match) {
+    throw new Error('Failed to generate QR code');
+  }
+
+  const [, , base64Data] = base64Match;
+
+  // Generate unique filename
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  const filename = `${filenamePrefix}-${uniqueSuffix}.png`;
+  const filePath = path.join(uploadDir, filename);
+
+  // Convert base64 to buffer and save
+  const buffer = Buffer.from(base64Data, 'base64');
+  fs.writeFileSync(filePath, buffer);
+
+  // Return the filename (relative path for storage)
+  return filename;
+};
 
 // Helper function to save base64 image to file
 const saveBase64Image = (base64String: string, filenamePrefix: string = 'qr', maxSizeMB: number = 2): string => {
@@ -195,7 +234,37 @@ export class ChallengeService {
       }
     });
 
-    return challenge;
+    // Generate QR codes for stages that don't have them yet
+    await Promise.all(
+      challenge.stages.map(async (stage) => {
+        if (!stage.qrCode) {
+          // Generate QR code with stage ID
+          const qrCodePath = await generateQRCode(stage.id, `qr-stage-${stage.order}`);
+          // Update stage with generated QR code
+          await prisma.stage.update({
+            where: { id: stage.id },
+            data: { qrCode: qrCodePath }
+          });
+        }
+      })
+    );
+
+    // Fetch updated challenge with generated QR codes
+    const updatedChallenge = await prisma.challenge.findUnique({
+      where: { id: challenge.id },
+      include: {
+        stages: {
+          orderBy: { order: 'asc' }
+        },
+        _count: {
+          select: {
+            progress: true
+          }
+        }
+      }
+    });
+
+    return updatedChallenge || challenge;
   }
 
   // Get all challenges with filters
@@ -450,7 +519,37 @@ static async updateChallenge(id: string, data: z.infer<typeof updateChallengeSch
     },
   });
 
-  return updatedChallenge;
+  // Generate QR codes for stages that don't have them yet
+  await Promise.all(
+    updatedChallenge.stages.map(async (stage) => {
+      if (!stage.qrCode) {
+        // Generate QR code with stage ID
+        const qrCodePath = await generateQRCode(stage.id, `qr-stage-${stage.order}`);
+        // Update stage with generated QR code
+        await prisma.stage.update({
+          where: { id: stage.id },
+          data: { qrCode: qrCodePath }
+        });
+      }
+    })
+  );
+
+  // Fetch updated challenge with generated QR codes
+  const finalChallenge = await prisma.challenge.findUnique({
+    where: { id },
+    include: {
+      stages: {
+        orderBy: { order: 'asc' },
+      },
+      _count: {
+        select: {
+          progress: true,
+        },
+      },
+    },
+  });
+
+  return finalChallenge || updatedChallenge;
 }
 
 
@@ -632,16 +731,12 @@ static async deleteChallenge(id: string) {
       }
 
       // Validate QR code matches stage (QR code should contain stage ID or unique identifier)
-      // For now, we'll accept any QR code data, but you can enhance this to validate
-      // against stored QR code data or require specific format
-      // The QR code should ideally contain the stage ID or a unique code
       const scannedData = validatedData.content.trim();
       
-      // Optional: Validate QR code contains stage ID (if using that format)
-      // Uncomment if QR codes contain stage ID:
-      // if (!scannedData.includes(stage.id)) {
-      //   throw new Error('Invalid QR code. This QR code does not match this stage.');
-      // }
+      // Validate QR code contains stage ID - this ensures the scanned code matches the correct stage
+      if (scannedData !== stage.id) {
+        throw new Error('Invalid QR code. This QR code does not match this stage.');
+      }
     } else {
       // If stage doesn't have QR code, but submission type is QR_CODE, that's invalid
       if (validatedData.submissionType === 'QR_CODE') {

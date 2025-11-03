@@ -6,6 +6,33 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seed...');
 
+  // Create levels
+  const levels = [
+    { number: 1, name: 'Novice Explorer', minXP: 0, maxXP: 499 },
+    { number: 2, name: 'Adventurer', minXP: 500, maxXP: 999 },
+    { number: 3, name: 'Seeker', minXP: 1000, maxXP: 1999 },
+    { number: 4, name: 'Pathfinder', minXP: 2000, maxXP: 2999 },
+    { number: 5, name: 'Veteran', minXP: 3000, maxXP: 4499 },
+    { number: 6, name: 'Champion', minXP: 4500, maxXP: 6499 },
+    { number: 7, name: 'Master', minXP: 6500, maxXP: 8999 },
+    { number: 8, name: 'Elite', minXP: 9000, maxXP: 11999 },
+    { number: 9, name: 'Legend', minXP: 12000, maxXP: 15999 },
+    { number: 10, name: 'Mythic', minXP: 16000, maxXP: null },
+  ];
+
+  for (const levelData of levels) {
+    const level = await prisma.level.upsert({
+      where: { number: levelData.number },
+      update: {
+        name: levelData.name,
+        minXP: levelData.minXP,
+        maxXP: levelData.maxXP,
+      },
+      create: levelData
+    });
+    console.log('✅ Level created:', level.name);
+  }
+
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 12);
   const admin = await prisma.user.upsert({
@@ -369,8 +396,10 @@ async function main() {
   ];
 
   for (const achievementData of achievements) {
-    const achievement = await prisma.achievement.create({
-      data: achievementData
+    const achievement = await prisma.achievement.upsert({
+      where: { name: achievementData.name },
+      update: {},
+      create: achievementData
     });
     console.log('✅ Achievement created:', achievement.name);
   }

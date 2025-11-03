@@ -7,14 +7,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Globe, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 
 interface Language {
   code: string;
   name: string;
   nativeName: string;
   flag: string;
+  abbreviation: string;
 }
 
 const languages: Language[] = [
@@ -22,19 +22,22 @@ const languages: Language[] = [
     code: 'en',
     name: 'English',
     nativeName: 'English',
-    flag: '🇺🇸'
+    flag: '🇺🇸',
+    abbreviation: 'us'
   },
   {
     code: 'ar',
     name: 'Arabic',
     nativeName: 'العربية',
-    flag: '🇸🇦'
+    flag: '🇸🇦',
+    abbreviation: 'ar'
   },
   {
     code: 'fr',
     name: 'French',
     nativeName: 'Français',
-    flag: '🇫🇷'
+    flag: '🇫🇷',
+    abbreviation: 'fr'
   }
 ];
 
@@ -63,29 +66,21 @@ export const LanguageSwitcher = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center gap-2 h-8 px-2"
+          className="h-8 px-2 hover:bg-primary/10 hover:text-white transition-colors"
         >
-          <Globe className="h-4 w-4" />
-          <span className="hidden sm:inline">{currentLanguage.flag}</span>
-          <span className="hidden md:inline text-sm">
-            {currentLanguage.nativeName}
+          <span className="text-xs sm:text-sm font-medium uppercase">
+            {currentLanguage.abbreviation}
           </span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-32">
         {languages.map((language) => (
           <DropdownMenuItem
             key={language.code}
             onClick={() => changeLanguage(language.code)}
             className="flex items-center justify-between cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{language.flag}</span>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{language.nativeName}</span>
-                <span className="text-xs text-muted-foreground">{language.name}</span>
-              </div>
-            </div>
+            <span className="text-sm font-medium">{language.nativeName}</span>
             {i18n.language === language.code && (
               <Check className="h-4 w-4 text-primary" />
             )}
